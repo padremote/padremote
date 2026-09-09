@@ -300,7 +300,6 @@ impl MacInjector {
     }
 }
 
-
 /// Open an app by name, without waiting for it to finish opening.
 ///
 /// `spawn` rather than `status`: this runs inline on the connection's own task,
@@ -309,7 +308,11 @@ impl MacInjector {
 /// takes to launch an application, which is not microseconds. Nothing here
 /// reads the exit code.
 fn launch(app: &str) {
-    match std::process::Command::new("open").arg("-a").arg(app).spawn() {
+    match std::process::Command::new("open")
+        .arg("-a")
+        .arg(app)
+        .spawn()
+    {
         // Reaped on a thread of its own, or it stays a zombie for the life of
         // the app.
         Ok(mut child) => {
@@ -485,8 +488,8 @@ impl Injector for MacInjector {
 /// `NSEventTypeSystemDefined` event with the `NX_SUBTYPE_AUX_CONTROL_BUTTONS`
 /// subtype, and the button number is packed into `data1` next to a nibble
 /// saying whether it is going down or coming back up. Only AppKit can construct
-/// an event with a subtype, which is the entire reason `objc2` is a dependency
-/// - one message, sent by hand, and then the resulting event goes through the
+/// an event with a subtype, which is the entire reason `objc2` is a dependency -
+/// one message, sent by hand, and then the resulting event goes through the
 /// same HID tap as everything else in this file.
 ///
 /// # Why not `osascript`

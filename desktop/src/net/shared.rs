@@ -377,7 +377,11 @@ impl Shared {
             // that just paired, for as long as the notification takes to be
             // drawn. Nothing here reads the exit code anyway - the comment
             // above already says a failure must not affect the pairing.
-            match std::process::Command::new("osascript").arg("-e").arg(script).spawn() {
+            match std::process::Command::new("osascript")
+                .arg("-e")
+                .arg(script)
+                .spawn()
+            {
                 Ok(mut child) => {
                     // Reaped on a thread of its own so the process does not
                     // linger as a zombie for the life of the app.

@@ -458,8 +458,14 @@ impl Config {
         // never offers, which is the more confusing half.
         const ACROSS: &[&str] = &["none", "spaces", "navigate", "tabs", "undoRedo"];
         #[cfg(target_os = "macos")]
-        const UP_DOWN: &[&str] =
-            &["none", "missionControl", "appWindows", "volume", "brightness", "zoom"];
+        const UP_DOWN: &[&str] = &[
+            "none",
+            "missionControl",
+            "appWindows",
+            "volume",
+            "brightness",
+            "zoom",
+        ];
         // One overview, so no separate App Expose to bind the other way.
         #[cfg(not(target_os = "macos"))]
         const UP_DOWN: &[&str] = &["none", "missionControl", "volume", "zoom"];

@@ -83,7 +83,8 @@ pub fn spawn_maintenance(runtime: &Runtime, shared: Arc<Shared>, config_path: Op
             // and a runtime worker stuck in one is a worker not reading
             // anybody's touches.
             let path = config_path.clone();
-            let (m, host) = blocking(move || (config_path_mtime(&path), HostTrackpad::read())).await;
+            let (m, host) =
+                blocking(move || (config_path_mtime(&path), HostTrackpad::read())).await;
 
             let file_changed = m.is_some() && m != last_mtime;
             if file_changed {

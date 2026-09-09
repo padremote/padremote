@@ -47,7 +47,10 @@ fn a_tap_could_still_become_a_double_tap() {
         rec.follow_up_ms() > 0,
         "a tap that has just landed can still gain a second half"
     );
-    assert!(rec.is_idle(), "and it is idle while it waits - that is the trap");
+    assert!(
+        rec.is_idle(),
+        "and it is idle while it waits - that is the trap"
+    );
 }
 
 #[test]

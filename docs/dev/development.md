@@ -262,8 +262,11 @@ cd ../web
 npm run check                                # types, ring, intro, crypto vectors
 npm run build
 
-# The security job. What each guards is in docs/dev/threat-model.md.
+# Rides along in the same job rather than starting a runner of its own.
 cd ..
+python3 -c "import json; json.load(open('protocol/v1.schema.json'))"
+
+# The security job. What each guards is in docs/dev/threat-model.md.
 ./tools/check-no-phone-home.sh               # no HTTP client, no outbound, no analytics
 cd desktop && cargo deny check               # advisories, licences, crate sources
 ```
