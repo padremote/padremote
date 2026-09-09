@@ -1,0 +1,59 @@
+{
+ "name": "two_finger_tap_rightclick",
+ "description": "two fingers tapped together -> right click",
+ "surface": {
+  "wpx": 390.0,
+  "hpx": 716.0
+ },
+ "samples": [
+  {
+   "t_ms": 0,
+   "pointer_id": 0,
+   "phase": 0,
+   "x": 0.461538,
+   "y": 0.418994
+  },
+  {
+   "t_ms": 12,
+   "pointer_id": 1,
+   "phase": 0,
+   "x": 0.666667,
+   "y": 0.418994
+  },
+  {
+   "t_ms": 82,
+   "pointer_id": 0,
+   "phase": 2,
+   "x": 0.461538,
+   "y": 0.418994
+  },
+  {
+   "t_ms": 82,
+   "pointer_id": 1,
+   "phase": 2,
+   "x": 0.666667,
+   "y": 0.418994
+  }
+ ],
+ "expect": {
+  "kinds": [
+   "click"
+  ],
+  "clicks": [
+   {
+    "button": "right",
+    "count": 1
+   }
+  ],
+  "net_move": [
+   0,
+   0
+  ],
+  "net_scroll": [
+   0,
+   0
+  ],
+  "net_zoom": 0,
+  "scroll_phases": []
+ }
+}

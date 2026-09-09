@@ -1,0 +1,30 @@
+/*
+ * The trackpad page. Everything it looks like is a utility class in
+ * `index.html`; what is left here is one rule, because it is a pair of
+ * declarations rather than a value.
+ *
+ * Not a Tailwind entry point: `theme.css` is the only one, and every page
+ * imports it alongside this, so the utilities are compiled and shipped once
+ * rather than once per page.
+ */
+
+/*
+ * Keep the frame in normal flow so browser chrome owns the page origin.
+ *
+ * Two declarations, deliberately: `svh` is the height with the browser bars
+ * expanded, and `--app-h` is what `visualViewport` currently reports - which
+ * may be smaller still because a keyboard is up, but which must never be
+ * allowed to make the frame *larger* than the screen when it is a stale
+ * full-screen reading. `min()` of the two is the answer, and the plain
+ * `var()` above it is what a browser that does not know `svh` falls back to.
+ *
+ * A utility class can hold either line. It cannot hold one and then the other.
+ */
+.app-frame {
+  height: var(--app-h, 100vh);
+  height: min(100svh, var(--app-h, 100svh));
+}
+.immersive .app-frame {
+  height: var(--app-h, 100vh);
+  height: min(100dvh, var(--app-h, 100dvh));
+}

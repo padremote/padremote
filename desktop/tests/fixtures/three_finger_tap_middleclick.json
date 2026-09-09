@@ -1,0 +1,73 @@
+{
+ "name": "three_finger_tap_middleclick",
+ "description": "three fingers tapped -> middle click",
+ "surface": {
+  "wpx": 390.0,
+  "hpx": 716.0
+ },
+ "samples": [
+  {
+   "t_ms": 0,
+   "pointer_id": 0,
+   "phase": 0,
+   "x": 0.358974,
+   "y": 0.418994
+  },
+  {
+   "t_ms": 10,
+   "pointer_id": 1,
+   "phase": 0,
+   "x": 0.512821,
+   "y": 0.418994
+  },
+  {
+   "t_ms": 20,
+   "pointer_id": 2,
+   "phase": 0,
+   "x": 0.666667,
+   "y": 0.418994
+  },
+  {
+   "t_ms": 90,
+   "pointer_id": 0,
+   "phase": 2,
+   "x": 0.358974,
+   "y": 0.418994
+  },
+  {
+   "t_ms": 90,
+   "pointer_id": 1,
+   "phase": 2,
+   "x": 0.512821,
+   "y": 0.418994
+  },
+  {
+   "t_ms": 90,
+   "pointer_id": 2,
+   "phase": 2,
+   "x": 0.666667,
+   "y": 0.418994
+  }
+ ],
+ "expect": {
+  "kinds": [
+   "click"
+  ],
+  "clicks": [
+   {
+    "button": "middle",
+    "count": 1
+   }
+  ],
+  "net_move": [
+   0,
+   0
+  ],
+  "net_scroll": [
+   0,
+   0
+  ],
+  "net_zoom": 0,
+  "scroll_phases": []
+ }
+}

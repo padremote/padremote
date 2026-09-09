@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en" class="w-full overflow-hidden overscroll-none">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0c1018" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="PadRemote" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/icon.svg" />
+  <title>PadRemote · Your wireless trackpad</title>
+</head>
+<!-- `nudge` is toggled by immersive.ts: one pixel of scrollable page, so a
+     swipe up has something to act on and the browser bars collapse. -->
+<body class="w-full select-none overflow-hidden overscroll-none [-webkit-touch-callout:none]
+             [&.nudge]:h-[calc(var(--app-h,100dvh)+1px)] [&.nudge]:overflow-y-auto">
+  <p id="launch-status" class="grid min-h-[100svh] place-items-center text-muted" role="status">Opening trackpad…</p>
+  <div id="app-frame" class="app-frame relative isolate w-full overflow-hidden" hidden>
+    <div id="surface"
+         class="absolute inset-0 z-0 h-full w-full touch-none bg-bg
+                bg-[radial-gradient(ellipse_at_50%_32%,#1b254032,transparent_65%)]
+                before:pointer-events-none before:absolute before:rounded-[30px] before:border before:border-[#232d3e] before:content-['']
+                before:top-[calc(82px+var(--sa-top))] before:right-[max(16px,var(--sa-right))]
+                before:bottom-[calc(104px+var(--sa-bottom))] before:left-[max(16px,var(--sa-left))]
+                min-[700px]:before:top-[100px] min-[700px]:before:right-8 min-[700px]:before:bottom-[114px]
+                min-[700px]:before:left-8 min-[700px]:before:rounded-[32px]
+                tiny:before:top-[60px] tiny:before:right-[max(16px,var(--sa-left))]
+                tiny:before:bottom-[78px] tiny:before:left-[max(16px,var(--sa-left))]
+                [.immersive_&]:before:opacity-0"
+         aria-label="Trackpad. Move with one finger, tap to click, and scroll with two fingers."></div>
+    <canvas id="trail" class="pointer-events-none absolute inset-0 z-[1] h-full w-full" aria-hidden="true"></canvas>
+    <header id="hud"
+            class="pointer-events-none absolute left-0 top-0 z-[2] flex w-full items-center gap-3
+                   pb-4 pl-[max(24px,var(--sa-left))] pr-[max(24px,var(--sa-right))] pt-[calc(22px+var(--sa-top))]
+                   min-[700px]:px-10 min-[700px]:pt-[calc(28px+var(--sa-top))]
+                   max-[359px]:gap-1.5 max-[359px]:pl-[18px] max-[359px]:pr-[18px]
+                   tiny:pt-[max(10px,var(--sa-top))]
+                   [.immersive_&]:pointer-events-none [.immersive_&]:invisible [.immersive_&]:opacity-0">
+      <div class="flex items-center gap-[9px] whitespace-nowrap text-[15px] font-[550] tracking-[-.03em] text-muted max-[359px]:gap-1.5">
+        <img src="/icon.svg" alt="" width="32" height="32" class="h-[26px] w-[26px] rounded-lg opacity-90" /><span>PadRemote</span>
+      </div>
+      <!-- Pinned to 48% so a long computer name can never push the brand off
+           the left of a 320px screen; the name ellipses instead. -->
+      <div class="ml-auto flex max-w-[48%] items-center gap-2 rounded-full border border-line bg-panel/50 px-3 py-2 text-xs text-muted
+                  max-[359px]:px-[9px] max-[359px]:py-[7px] max-[359px]:text-[11px]" role="status">
+        <span id="dot" class="dot connecting" aria-hidden="true"></span><span id="status-text" class="truncate">Connecting…</span>
+      </div>
+      <span id="peers" class="text-[11px] text-muted" hidden>2 devices</span>
+    </header>
+    <main id="pad-guidance"
+          class="pointer-events-none absolute z-[2] flex flex-col items-center justify-center text-center transition-opacity duration-[600ms]
+                 bottom-[calc(140px+var(--sa-bottom))] left-7 right-7 top-[calc(82px+var(--sa-top))]
+                 min-[700px]:bottom-[150px] min-[700px]:top-[100px]
+                 tiny:bottom-[112px] tiny:top-[60px]
+                 [.has-used-pad_&]:opacity-[.17]
+                 [.immersive_&]:pointer-events-none [.immersive_&]:invisible [.immersive_&]:opacity-0"
+          aria-label="Trackpad guide">
+      <div class="mb-[26px] w-16 text-accent opacity-90 short:mb-4 short:w-[52px] tiny:hidden" aria-hidden="true">
+        <svg viewBox="0 0 80 80" fill="none" class="block w-full"><rect x="13" y="8" width="54" height="64" rx="15" stroke="currentColor" stroke-width="1.5"/><circle cx="33" cy="35" r="5" fill="currentColor"/><circle cx="47" cy="44" r="5" fill="currentColor" opacity=".45"/><path d="M31 61h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </div>
+      <p id="pad-title" class="max-w-[250px] text-sm tracking-[-.01em] text-dim tiny:max-w-none">Move anywhere to move the cursor.</p>
+      <!-- The three gestures worth knowing before the first touch. Gone in
+           landscape, where the room they need is the room the pad needs. -->
+      <div class="mt-10 flex gap-6 text-[11px] text-faint
+                  min-[700px]:gap-10 short:mt-6 tiny:hidden max-[359px]:gap-[14px]
+                  [&>span]:flex [&>span]:flex-col [&>span]:items-center [&>span]:gap-2.5
+                  [&_b]:block [&_b]:h-[9px] [&_b]:w-[9px] [&_b]:rounded-full [&_b]:bg-accent [&_b]:opacity-65"
+           aria-label="Basic gestures">
+        <span><i class="flex h-[18px] items-center justify-center gap-1" aria-hidden="true"><b></b></i>Tap to click</span>
+        <span><i class="flex h-[18px] items-center justify-center gap-1" aria-hidden="true"><b></b><b></b></i>Two to scroll</span>
+        <span><i class="flex h-[18px] w-[19px] items-center justify-center gap-1 rounded-full border border-[#93a7ff55]" aria-hidden="true"><b></b></i>Hold to drag</span>
+      </div>
+    </main>
+    <div class="pointer-events-none absolute left-10 right-10 z-[2] grid justify-items-center gap-2.5
+                bottom-[calc(122px+var(--sa-bottom))] tiny:bottom-20">
+      <p id="hint" class="max-w-[480px] rounded-[10px] bg-bg/[92.5%] px-3 py-2 text-center text-xs text-muted" role="status">Looking for your computer…</p>
+      <button id="take-control" class="btn btn-primary pointer-events-auto" type="button" hidden>Take control</button>
+    </div>
+    <!-- Three targets on one bar. `[&_svg]:` sizes the icons once rather than
+         on each of them, which is the only reason the items are readable. -->
+    <nav id="pad-toolbar"
+         class="absolute z-[3] mx-auto flex max-w-[400px] justify-center gap-0.5 rounded-[21px] border border-[#222c3d] bg-[#131a26cc] p-[5px] backdrop-blur-[14px]
+                bottom-[calc(20px+var(--sa-bottom))] left-[max(24px,var(--sa-left))] right-[max(24px,var(--sa-right))]
+                min-[700px]:max-w-[440px] tiny:bottom-[max(8px,var(--sa-bottom))]
+                [&_svg]:h-[22px] [&_svg]:w-[22px] [&_svg]:stroke-current [&_svg]:[stroke-width:1.5] [&_svg]:[stroke-linecap:round] [&_svg]:[stroke-linejoin:round]
+                [.immersive_&]:pointer-events-none [.immersive_&]:invisible [.immersive_&]:opacity-0"
+         aria-label="Trackpad controls">
+      <a id="gesture-guide"
+         class="flex min-h-14 max-w-[180px] flex-1 flex-col items-center justify-center gap-[5px] rounded-2xl bg-transparent px-2.5 py-2 text-[11px] font-medium text-dim no-underline active:bg-raised active:text-fg tiny:flex-row tiny:gap-2.5"
+         href="/config.html#gestures"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="5"/><circle cx="9" cy="10" r="1.5"/><circle cx="15" cy="13" r="1.5"/></svg><span>Gestures</span></a>
+      <button id="focus-mode" type="button"
+         class="flex min-h-14 max-w-[180px] flex-1 flex-col items-center justify-center gap-[5px] rounded-2xl bg-transparent px-2.5 py-2 text-[11px] font-medium text-dim active:bg-raised active:text-fg tiny:flex-row tiny:gap-2.5"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg><span>Full screen</span></button>
+      <!-- The two dots on the sliders are filled with the bar’s own colour, so
+           the track reads as passing behind them rather than through them. -->
+      <button id="settings-open" type="button" aria-haspopup="dialog" aria-controls="sheet" aria-expanded="false"
+         class="flex min-h-14 max-w-[180px] flex-1 flex-col items-center justify-center gap-[5px] rounded-2xl bg-transparent px-2.5 py-2 text-[11px] font-medium text-dim active:bg-raised active:text-fg tiny:flex-row tiny:gap-2.5 [&_circle]:fill-[#131a26]"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/></svg><span>Settings</span></button>
+    </nav>
+    <button id="exit-immersive" type="button" aria-label="Exit full screen"
+            class="btn absolute z-[3] hidden border-line bg-raised/85 text-xs text-muted
+                   bottom-[calc(16px+var(--sa-bottom))] right-[max(16px,var(--sa-right))]
+                   [.immersive_&]:inline-flex">Exit full screen <span aria-hidden="true">↙</span></button>
+    <section id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" aria-hidden="true" tabindex="-1" hidden
+             class="invisible absolute inset-0 z-10 flex items-end justify-center bg-[#030711a6] opacity-0 backdrop-blur-lg transition-opacity duration-200
+                    [&.open]:visible [&.open]:opacity-100
+                    min-[700px]:items-center min-[700px]:p-6">
+      <div class="grid w-full max-w-[520px] translate-y-3 touch-pan-y select-text gap-5 overflow-y-auto overscroll-contain
+                  rounded-t-[28px] border border-b-0 border-line bg-panel px-6 pb-[max(24px,var(--sa-bottom))] pt-3
+                  max-h-[calc(100%-max(12px,var(--sa-top)))] [-webkit-overflow-scrolling:touch]
+                  transition-transform duration-200 [.open_&]:translate-y-0
+                  min-[700px]:max-h-full min-[700px]:rounded-3xl min-[700px]:border-b min-[700px]:p-6
+                  short:gap-[14px] max-[359px]:px-[18px]">
+        <div class="mx-auto h-1 w-9 rounded bg-[#43506a] min-[700px]:hidden" aria-hidden="true"></div>
+        <div class="flex items-center justify-between gap-3 pb-0.5 pt-1">
+          <h1 id="sheet-title" class="text-[22px] font-[650] leading-tight tracking-[-.035em]">Settings</h1>
+          <button id="settings-close" class="btn btn-bare" type="button">Done</button>
+        </div>
+        <div class="grid gap-3 border-b border-line pb-[18px]">
+          <label class="row text-sm" for="device-name"><span class="min-w-0">Device name</span></label>
+          <input id="device-name" class="w-full" type="text" autocomplete="off" autocapitalize="words" spellcheck="false" maxlength="32" placeholder="iPhone" />
+        </div>
+        <div class="grid gap-3 border-b border-line pb-[18px]">
+          <label class="row text-sm" for="sensitivity"><span class="min-w-0">Pointer speed</span><output id="sensitivity-value" class="text-sm tabular-nums text-accent">1.00</output></label>
+          <input id="sensitivity" type="range" min="0.25" max="3" step="0.05" value="1" />
+          <div class="-mt-2.5 flex items-center justify-between gap-1 text-[11px] text-faint"><span>Slower</span><span>Faster</span></div>
+          <button id="sensitivity-note" class="btn -mt-1 min-h-0 justify-start bg-transparent p-0 text-left text-xs font-normal text-accent empty:hidden disabled:text-faint not-disabled:min-h-11" type="button" disabled>Matching your computer</button>
+        </div>
+        <div class="grid gap-3 border-b border-line pb-[18px]">
+          <div><label class="row text-sm" for="natural"><span class="min-w-0">Natural scrolling</span><input id="natural" type="checkbox" role="switch" /></label><button id="natural-note" class="btn -mt-1 min-h-0 justify-start bg-transparent p-0 text-left text-xs font-normal text-accent empty:hidden disabled:text-faint not-disabled:min-h-11" type="button" disabled>Matching your computer</button></div>
+          <label class="row text-sm mt-2" for="click-sound"><span class="min-w-0">Click sound</span><input id="click-sound" type="checkbox" role="switch" /></label>
+        </div>
+        <div id="shake-row">
+          <div class="row text-sm"><span class="min-w-0">Full screen</span><span class="flex flex-shrink-0 items-center gap-2"><button id="enable-shake" class="btn btn-bare" type="button" hidden>Allow shake</button><button id="go-full-screen" class="btn" type="button">Toggle</button></span></div>
+          <p class="text-xs leading-[1.5] text-faint [&_em]:not-italic"><em id="shake-note"></em><em id="fullscreen-note" hidden></em></p>
+        </div>
+        <a id="all-settings" class="flex min-h-[52px] items-center justify-between rounded-[14px] bg-raised px-4 py-3 text-sm font-medium text-fg no-underline [&>span:last-child]:text-dim" href="/config.html"><span>All settings</span><span aria-hidden="true">↗</span></a>
+        <details class="group text-xs text-muted">
+          <summary class="flex min-h-11 cursor-pointer list-none items-center justify-between after:text-lg after:content-['+'] group-open:after:content-['−'] [&::-webkit-details-marker]:hidden">Connection details</summary>
+          <div class="grid grid-cols-2 gap-2 [&>span]:grid [&>span]:gap-[3px] [&_b]:font-medium [&_b]:text-fg">
+            <span>Gesture <b id="gesture">Idle</b></span><span>Touch rate <b id="rate">0 Hz</b></span><span>Frame variation <b id="jitter">±0 ms</b></span><span>Latency <b id="latency">— ms</b></span>
+          </div>
+          <p id="build" class="mt-3 font-mono text-[10px] [overflow-wrap:anywhere]"></p>
+        </details>
+      </div>
+    </section>
+  </div>
+  <noscript><p class="fixed inset-x-5 top-[40%] z-20 bg-panel p-6 text-center">Enable JavaScript to use PadRemote.</p></noscript>
+  <script type="module" src="/src/boot.ts"></script>
+</body>
+</html>

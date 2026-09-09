@@ -1,0 +1,59 @@
+{
+  "version": 2,
+  "followSystem": true,
+  "sensitivity": 1.0,
+  "accel": {
+    "gain": 1.0
+  },
+  "tap": {
+    "tapMaxMs": 200,
+    "tapMaxPx": 10,
+    "doubleTapMs": 500,
+    "pressMs": 500
+  },
+  "scroll": {
+    "enabled": true,
+    "natural": true,
+    "momentum": true,
+    "speed": 1.0,
+    "accel": 1.0,
+    "horizontal": true
+  },
+  "zoom": {
+    "enabled": false,
+    "backend": "appZoom",
+    "threshold": 0.05
+  },
+  "drag": {
+    "pressAndDrag": true,
+    "tapAndDrag": false
+  },
+  "swipe": {
+    "minPx": 50
+  },
+  "bindings": {
+    "oneTap": "leftClick",
+    "twoFingerTap": "rightClick",
+    "threeFingerTap": "middleClick",
+    "fourFingerTap": "none",
+    "twoFingerDoubleTap": "none",
+    "cornerSecondaryClick": "none",
+    "twoFingerSwipeNavigate": "none",
+    "threeFingerHorizSwipe": "none",
+    "threeFingerVertSwipe": "none",
+    "fourFingerHorizSwipe": "none",
+    "fourFingerVertSwipe": "none",
+    "fourFingerPinch": "none",
+    "fiveFingerSpread": "none",
+    "twoFingerSwipeLeft": "inherit",
+    "twoFingerSwipeRight": "inherit",
+    "threeFingerSwipeLeft": "inherit",
+    "threeFingerSwipeRight": "inherit",
+    "threeFingerSwipeUp": "inherit",
+    "threeFingerSwipeDown": "inherit",
+    "fourFingerSwipeLeft": "inherit",
+    "fourFingerSwipeRight": "inherit",
+    "fourFingerSwipeUp": "inherit",
+    "fourFingerSwipeDown": "inherit"
+  }
+}

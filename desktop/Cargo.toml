@@ -1,0 +1,60 @@
+[package]
+name = "padremote"
+version = "0.1.0"
+edition = "2021"
+# `replay` is a developer tool; `cargo run` should start the app.
+default-run = "padremote"
+rust-version = "1.75"
+description = "Use your phone's touchscreen as a wireless trackpad"
+license = "MIT"
+
+[dependencies]
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+# `preserve_order` keeps a struct's fields in the order they were declared all
+# the way to the browser. Without it every object becomes a sorted map, and the
+# settings page - which builds its form from the config it is sent - lists every
+# setting alphabetically instead of in the order someone thought about them.
+serde_json = { version = "1", features = ["preserve_order"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "sync", "time", "signal", "process"] }
+tokio-tungstenite = "0.24"
+futures-util = { version = "0.3", default-features = false, features = ["sink"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+dirs = "5"
+tray-icon = "0.24.2"
+tao = "0.36.0"
+qrcode = { version = "0.14.1", features = ["svg"] }
+# The pairing handshake (src/auth.rs). RustCrypto rather than anything
+# hand-rolled: this is the one part of the app where being clever is a bug, and
+# `cargo deny` in CI watches these three for advisories.
+hmac = "0.12"
+sha2 = "0.10"
+getrandom = "0.2"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+# "highsierra" exposes CGEventCreateScrollWheelEvent2, the pixel-unit scroll
+# constructor the spec requires for smooth scrolling (plan.md section 9.10).
+core-graphics = { version = "0.24", features = ["highsierra"] }
+# Reading the host's trackpad preferences (CFPreferences).
+core-foundation = "0.10"
+core-foundation-sys = "0.8"
+# The volume keys. They are not keystrokes and CGEvent cannot build one: an
+# `NSEventTypeSystemDefined` event with a subtype is only constructible through
+# AppKit, so `input/macos.rs` sends that one message by hand. Already in the
+# tree underneath `tao`, so this costs nothing to compile.
+objc2 = "0.6"
+
+# The gesture engine is OS-agnostic; only `src/input` differs per platform.
+# macOS drives CGEvent directly (pixel-precise scroll, click state), while
+# Windows and Linux sit on enigo - see docs/dev/porting.md.
+[target.'cfg(not(target_os = "macos"))'.dependencies]
+enigo = "0.2"
+
+# Reading the Precision Touchpad settings out of the registry.
+[target.'cfg(target_os = "windows")'.dependencies]
+winreg = "0.52"
+
+[profile.release]
+lto = true
+strip = true

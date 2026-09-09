@@ -1,0 +1,154 @@
+# The checks that have to pass before a change is believed.
+#
+# macOS runners throughout: the input backend, the trackpad mirroring and the
+# tray are all macOS-only, so a Linux runner would compile a stub of the app and
+# report success on code nobody ships.
+#
+# What is deliberately NOT here: anything that needs Accessibility permission or
+# a real cursor. `tests/injection.rs` moves the actual mouse, so it is
+# `#[ignore]`d and stays that way - CI cannot grant itself the permission, and a
+# test that silently no-ops is worse than one that is honestly skipped.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  desktop:
+    name: desktop (rust)
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop
+      - name: Format
+        run: cargo fmt --check
+      - name: Lint
+        run: cargo clippy --all-targets -- -D warnings
+      # No Node here, deliberately. The phone page is compiled into the binary,
+      # and `cargo build` has to keep working without it - for this job, and for
+      # anyone touching the gesture engine who has never run npm. The page
+      # server's tests skip the content assertions and say so.
+      - name: Test
+        run: cargo test
+      - name: Release build
+        run: cargo build --release
+
+      # ...and now the other half: with a real page built, the same tests check
+      # that it is actually served. Split from the run above so a regression
+      # says which of the two arrangements broke.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Build the phone page
+        run: npm ci && npm run build
+        working-directory: web
+      - name: The app serves the page it was built with
+        run: cargo test --test pages
+      # The Windows and Linux code paths are written but unproven (see
+      # docs/dev/porting.md). Type-checking them here is what stops them
+      # rotting silently: without it, a change to the `Injector` trait or to
+      # `HostTrackpad` breaks a platform nobody compiles until someone tries to
+      # ship it. Windows only - `enigo`'s Linux path needs X11 and D-Bus
+      # headers, which a macOS runner cannot provide.
+      - name: Windows still compiles
+        run: |
+          rustup target add x86_64-pc-windows-msvc
+          cargo check --target x86_64-pc-windows-msvc --all-targets
+
+  # The security claims, checked rather than asserted.
+  #
+  # PadRemote moves the cursor and clicks things on the machine it runs on, and
+  # it tells users that nothing leaves their network. Both of those are promises
+  # that fail silently: a regression does not crash, it just quietly starts
+  # letting the wrong caller in, or quietly starts talking to a server. So they
+  # are enforced here, on every push, rather than in a document.
+  security:
+    name: security
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # "No cloud, no accounts, no telemetry" - the one claim a user cannot
+      # verify for themselves without a packet capture. See the script for what
+      # each rule is guarding.
+      - name: Nothing phones home
+        run: ./tools/check-no-phone-home.sh
+
+      # Every way in that should be refused: no pairing secret, a wrong one, a
+      # replayed one, touches sent before the handshake, and a page on the web
+      # opening a socket to localhost. Each asserts that *nothing reached the
+      # OS*, because a server that refuses politely and injects anyway would
+      # pass any check made on the socket alone.
+      - name: The front door is locked
+        run: cargo test --test auth
+        working-directory: desktop
+
+      # The hand-written SHA-256 the phone answers the challenge with, against
+      # FIPS 180-4, RFC 4231, and Node's OpenSSL over random inputs.
+      - name: The phone's crypto and its half of the handshake
+        run: |
+          npm ci
+          npm run check:hmac
+          npm run check:link
+        working-directory: web
+
+      # The realistic attack on an app like this is a dependency, not the wire
+      # protocol. Advisories, banned crates, licenses, and the rule that
+      # everything comes from crates.io.
+      - name: Dependencies
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          manifest-path: desktop/Cargo.toml
+          command: check
+          arguments: --config desktop/deny.toml
+
+  web:
+    name: phone page (typescript)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      # Types, the ring's agreement with the engine, and the hold animation.
+      - run: npm run check
+      - run: npm run build
+
+  protocol:
+    name: protocol schema
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # The schema is the contract between the two halves above. It is hand
+      # written, so the one thing CI can cheaply prove is that it is still
+      # valid JSON Schema - a typo here breaks nothing at build time and
+      # everything for whoever reads it next.
+      - run: python3 -c "import json,sys; json.load(open('protocol/v1.schema.json')); print('schema parses')"

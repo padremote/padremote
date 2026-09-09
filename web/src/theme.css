@@ -1,0 +1,445 @@
+/*
+ * The design system, and the only stylesheet on the project that is hand-written.
+ *
+ * Tailwind does the work. Every layout, spacing, colour and type decision lives
+ * as a utility class in the markup - in the HTML files and in the TypeScript
+ * that builds the rest of it - so a rule can be read off the element it applies
+ * to instead of being hunted for in a file somewhere else. What is left here is
+ * the three things a utility class cannot be:
+ *
+ *   `@theme`      - the tokens the utilities are generated from, so `bg-panel`
+ *                   and `text-muted` mean one thing across five pages.
+ *   `@layer base` - element defaults for the form controls. These are here
+ *                   rather than in the markup because a range thumb and a
+ *                   checkbox switch are drawn with `::-webkit-slider-thumb` and
+ *                   `::after`, which no class on the input can reach, and
+ *                   because the settings page generates its inputs from the
+ *                   config the desktop sends - a control has to arrive already
+ *                   looking like the others without the page deciding to.
+ *   components    - the handful of classes whose *name* is the interface: set
+ *                   from TypeScript, asserted by `scripts/check-*.mjs`, or
+ *                   toggled as state. `dot connected` is written by ui.ts and
+ *                   compared string-for-string by a check; it cannot become
+ *                   nine utilities without both of those having an opinion.
+ */
+@import "tailwindcss";
+
+/* Vite serves and builds from `web/`, so point the scanner at the two places
+   class names are written: the pages, and the code that generates markup. */
+@source "../*.html";
+@source "./**/*.ts";
+
+@theme {
+  /* Four steps out of the background, and one line between things. Every
+     surface on every page is one of these; there is no fifth grey. */
+  --color-bg: #0c1018;
+  --color-panel: #151c28;
+  --color-raised: #1d2736;
+  --color-line: #2b3748;
+  /* The border a pointer lights up. Only ever paired with `hover:`, because a
+     touch screen has no hover and lighting things up under a thumb is a lie. */
+  --color-edge: #41516a;
+
+  /* And four steps of text on them, from the thing you are reading down to the
+     thing you are not. */
+  --color-fg: #edf2fa;
+  --color-muted: #a7b4c8;
+  --color-dim: #8c9bb2;
+  --color-faint: #77879e;
+
+  --color-accent: #93a7ff;
+  --color-accent-lit: #b0beff;
+  --color-accent-soft: #252e4b;
+  /* Text and icons *on* an accent fill. Near-black rather than the page's white
+     because the accent is a light blue, and white on it is not readable. */
+  --color-on-accent: #111a33;
+
+  --color-ok: #79dbb0;
+  --color-warn: #f0c578;
+  --color-bad: #ff9d9d;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /*
+   * A page arrives from the side it came from: deeper from the right, back
+   * towards the hub from the left. The direction is the only thing saying which
+   * way the user just went, and a page that always slides in from the same side
+   * says nothing.
+   *
+   * It arrives blurred, too. A thing moving fast enough to need 260ms to get
+   * here is a thing that was, for those 260ms, moving - and the blur is what
+   * makes the page look like it travelled rather than like it was swapped. No
+   * `fill` on either: the moment the movement is over there is nothing left to
+   * describe, and a `filter` left applied is a containing block left behind.
+   */
+  --animate-page-in: page-from-right 260ms cubic-bezier(0.22, 0.7, 0.2, 1);
+  --animate-page-out: page-from-left 260ms cubic-bezier(0.22, 0.7, 0.2, 1);
+  @keyframes page-from-right {
+    from { opacity: 0; transform: translate3d(26px, 0, 0); filter: blur(7px); }
+    60% { opacity: 1; }
+    to { opacity: 1; transform: none; filter: blur(0); }
+  }
+  @keyframes page-from-left {
+    from { opacity: 0; transform: translate3d(-26px, 0, 0); filter: blur(7px); }
+    60% { opacity: 1; }
+    to { opacity: 1; transform: none; filter: blur(0); }
+  }
+
+  /* Travel accelerates away and settles. Shared with the gesture drawings on
+     the settings page, which name it again in their own units. */
+  --ease-travel: cubic-bezier(0.42, 0, 0.18, 1);
+}
+
+/*
+ * Height is a real constraint here and Tailwind ships no height breakpoints:
+ * a phone held sideways is 390px tall, and the settings page's three-column
+ * layout is a treatment for a window big enough to hold the whole scene rather
+ * than for a wide short one. Named once rather than written out as
+ * `[@media(max-height:480px)]:` forty times.
+ */
+@custom-variant short (@media (max-height: 640px));
+@custom-variant tiny (@media (max-height: 480px));
+@custom-variant flat (@media (max-height: 500px));
+/* Two stages of the same treatment, and the order they are declared in is the
+   order they override each other in. `paned` is the gestures page as panes
+   rather than as a page: the list, the drawing and the actions each keep their
+   own height and scroll inside it, so the actions are on the screen instead of
+   below two thousand pixels of gesture list. `roomy` is that plus the room to
+   put the actions *beside* the drawing rather than under it. A tablet held
+   upright is the whole reason there are two: at 820px the three columns do not
+   fit, and treating it as a tall phone left the thing you came to change off
+   the bottom of the screen.
+
+   Two queries in the one variant because the height it takes depends on which
+   arrangement is in force. With three columns the drawing has a column to
+   itself and 640px is enough for all of them. With two, the drawing sits on top
+   of the actions and spends about 300px doing it - so under 800px the actions
+   pane came out at 250px, which is a search box and one and a half choices, and
+   the scrolling page it replaced was better. The wide-and-short window is why
+   the second query is there at all: `roomy` sets only the third column, and
+   every rule that gives these panels a height of their own says `paned`. */
+@custom-variant paned {
+  @media (min-width: 700px) and (min-height: 800px) { @slot }
+  @media (min-width: 1020px) and (min-height: 640px) { @slot }
+}
+@custom-variant roomy (@media (min-width: 1020px) and (min-height: 640px));
+/* Twenty looping gesture drawings, drawn only for someone who wants them. */
+@custom-variant motion-ok (@media (prefers-reduced-motion: no-preference));
+
+@layer base {
+  :root {
+    /* Read back by `trail.ts` off the computed style of the root element, so an
+       edge indicator on the phone clears the notch. They have to exist as these
+       four names whether or not any rule on the page uses them - a canvas
+       cannot ask a utility class where the safe area is. */
+    --sa-top: env(safe-area-inset-top, 0px);
+    --sa-right: env(safe-area-inset-right, 0px);
+    --sa-bottom: env(safe-area-inset-bottom, 0px);
+    --sa-left: env(safe-area-inset-left, 0px);
+    color-scheme: dark;
+    font-size: 16px;
+  }
+
+  /* Preflight has no opinion about the `hidden` attribute, and nearly
+     everything this app hides is a flex or grid item that would otherwise win
+     against it on specificity. A page whose panels are all visible at once is
+     the failure this one line prevents. */
+  [hidden] {
+    display: none !important;
+  }
+
+  body {
+    @apply bg-bg text-fg font-sans text-[15px]/[1.5] antialiased;
+  }
+
+  a {
+    @apply text-accent underline-offset-4;
+  }
+
+  /* A tap on a phone should look like the thing it did, not like a grey box
+     flashing over it - the pressed states are drawn deliberately, below. */
+  button,
+  a,
+  input,
+  select,
+  summary {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Stops a double-tap on a control from being read as a zoom, which is a 300ms
+     delay on every button on a page that is otherwise instant. */
+  button,
+  a,
+  summary {
+    touch-action: manipulation;
+  }
+
+  :focus-visible {
+    @apply outline-3 outline-accent outline-offset-4;
+  }
+
+  /* ------------------------------------------------------------ form controls
+   *
+   * The settings page builds its inputs from the config the desktop sends, so a
+   * setting added to the Rust struct appears here already dressed. That is why
+   * these are element rules: there is no markup to hang a class on.
+   */
+  input[type="text"],
+  input[type="number"],
+  input[type="search"],
+  select {
+    /* 16px is not a size choice. iOS Safari zooms the page when a field with
+       smaller text takes focus, and a zoomed page on a trackpad is a page whose
+       coordinates have all moved. */
+    @apply min-w-0 max-w-full min-h-11 text-base text-fg bg-bg border border-line rounded-[10px] px-3 py-2.5;
+  }
+  input[type="search"] {
+    @apply appearance-none;
+  }
+  /* On a phone the native cancel button is a 12px target. The action search
+     draws its own at a size a thumb can hit; see `config.html`. */
+  input[type="search"]::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+  }
+  input:focus,
+  select:focus {
+    @apply border-accent;
+  }
+  input:disabled,
+  select:disabled {
+    @apply opacity-65 cursor-default;
+  }
+
+  input[type="range"] {
+    @apply appearance-none w-full h-9 bg-transparent cursor-pointer;
+  }
+  input[type="range"]::-webkit-slider-runnable-track {
+    @apply h-[5px] bg-line rounded-full;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    @apply appearance-none w-6 h-6 -mt-[9.5px] border-3 border-panel rounded-full bg-accent;
+    box-shadow: 0 0 0 1px var(--color-accent);
+  }
+  input[type="range"]::-moz-range-track {
+    @apply h-[5px] bg-line rounded-full;
+  }
+  input[type="range"]::-moz-range-thumb {
+    @apply w-5 h-5 border-3 border-panel rounded-full bg-accent;
+  }
+  /* A slider the computer decides has to look decided: the accent thumb is the
+     page's "this is yours to move", and leaving it on a locked control means the
+     only thing saying otherwise is a sentence underneath. */
+  input[type="range"]:disabled {
+    @apply cursor-default;
+  }
+  input[type="range"]:disabled::-webkit-slider-thumb {
+    @apply bg-faint;
+    box-shadow: 0 0 0 1px var(--color-faint);
+  }
+  input[type="range"]:disabled::-moz-range-thumb {
+    @apply bg-faint;
+  }
+
+  /* The switch. Drawn rather than themed, because a native checkbox at 28px is
+     not a target and does not read as on or off across the room. */
+  input[type="checkbox"] {
+    @apply appearance-none relative w-12 h-7 flex-none border rounded-full cursor-pointer;
+    border-color: #536079;
+    background: #344054;
+    transition: background 0.2s, border-color 0.2s;
+  }
+  input[type="checkbox"]::after {
+    content: "";
+    @apply absolute top-[3px] left-[3px] w-5 h-5 rounded-full;
+    background: #e6edf8;
+    box-shadow: 0 1px 3px #0003;
+    transition: transform 0.2s;
+  }
+  input[type="checkbox"]:checked {
+    @apply bg-accent border-accent;
+  }
+  input[type="checkbox"]:checked::after {
+    @apply bg-on-accent;
+    transform: translateX(20px);
+  }
+  /* Dashed, so a switch the computer is holding at a value looks held rather
+     than merely dull - the same information the greyed slider thumb carries. */
+  input[type="checkbox"]:disabled {
+    border-style: dashed;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  /* Everything here is either feedback for something that just happened or a
+     picture of a gesture. Both are decoration to someone who asked not to be
+     moved, and the gesture drawings in particular are twenty looping
+     animations on one page. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      scroll-behavior: auto !important;
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /*
+   * The button, everywhere. A component rather than a utility string repeated
+   * forty times, because half of these buttons are created by TypeScript from a
+   * config the page has never seen, and because 44px is the floor a thumb needs
+   * and is not a thing any one page should be able to decide for itself.
+   */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 min-h-11 px-4 py-2.5
+           border border-transparent rounded-xl bg-raised text-fg
+           text-sm font-[550] leading-[1.4] no-underline cursor-pointer;
+    transition: background 0.18s, color 0.18s, border-color 0.18s, transform 0.18s;
+  }
+  @media (hover: hover) {
+    .btn:hover:not(:disabled) {
+      @apply bg-line border-edge;
+    }
+  }
+  .btn:active:not(:disabled) {
+    @apply translate-y-px;
+  }
+  .btn:disabled {
+    @apply text-faint cursor-default;
+  }
+  /* The one action a screen is *for*. There is at most one per screen. */
+  .btn-primary {
+    @apply bg-accent text-on-accent;
+  }
+  @media (hover: hover) {
+    .btn-primary:hover:not(:disabled) {
+      @apply bg-accent-lit border-transparent;
+    }
+  }
+  /* A button that is really a link: no box until it is touched. */
+  .btn-bare {
+    @apply bg-transparent text-accent;
+  }
+
+  /*
+   * A panel is the page's one container. Kept as a class because four pages
+   * draw the same box and two of them generate it from code, and because the
+   * settings page then re-uses the name as a grid to lay rows out in.
+   */
+  .panel {
+    @apply relative bg-panel border border-line rounded-[20px] p-6;
+  }
+
+  /*
+   * The connection light. `ui.ts` writes `dot connected` as a whole string and
+   * `scripts/check-connect.mjs` compares that string exactly, so the state has
+   * to be one word appended to one word.
+   */
+  .dot {
+    @apply inline-block w-2 h-2 flex-none rounded-full bg-faint;
+    transition: background 0.2s;
+  }
+  .dot.connected {
+    @apply bg-ok;
+    /* A halo, not a bigger dot: the row it sits in is a fixed height and the
+       green is the only thing on the page that should draw the eye twice. */
+    box-shadow: 0 0 0 4px #79dbb012;
+  }
+  .dot.connecting,
+  .dot.waiting {
+    @apply bg-warn;
+  }
+  .dot.offline,
+  .dot.superseded,
+  .dot.unpaired,
+  .dot.replaced {
+    @apply bg-bad;
+  }
+
+  /*
+   * A word about a state, in the colour of that state. The modifiers are the
+   * desktop's own vocabulary - `mirrored`, `approximated`, `not possible` -
+   * spliced into a class by `config.ts` and `debug.ts`, which is why they are
+   * spelled the way the protocol spells them.
+   */
+  .tag {
+    @apply inline-block px-[9px] py-1 rounded-[7px] bg-raised text-muted text-[11px] font-[550];
+  }
+  .tag.on,
+  .tag.ok,
+  .tag.mirrored {
+    background: #19382e;
+    @apply text-ok;
+  }
+  .tag.warn,
+  .tag.approximated {
+    background: #3c3020;
+    @apply text-warn;
+  }
+  .tag.bad,
+  .tag.not-possible {
+    background: #41262e;
+    @apply text-bad;
+  }
+  .tag.auto {
+    @apply bg-accent-soft text-accent;
+  }
+  /* The connection check shows the desktop's raw status words rather than the
+     settings page's translations, so it has one more of them. */
+  .tag.handled-by-macOS {
+    background: #18323e;
+    color: #91d0e5;
+  }
+
+  /*
+   * One setting per row: what it is on the left, the control on the right.
+   *
+   * The explanation lives under the name rather than beside the control,
+   * because it is about the setting rather than about the widget - and because
+   * a phone is narrow, where anything beside anything else becomes a column two
+   * words wide.
+   *
+   * A component and not a utility string because the settings page generates
+   * its rows from the config the desktop sends, and because these descendant
+   * rules dress inputs the page never sees the markup of.
+   */
+  .row {
+    @apply flex min-h-11 items-center justify-between gap-[18px];
+  }
+  .row > span {
+    @apply block min-w-0;
+  }
+  .row em {
+    @apply mt-1.5 block text-[12.5px]/[1.45] not-italic text-faint;
+  }
+  .row em:empty {
+    @apply hidden;
+  }
+  /* Held by the computer rather than merely explanatory, so it is read at the
+     weight of the setting's own name. */
+  .row em.locked {
+    @apply text-muted;
+  }
+  /* A number is read right-to-left off its last digit, and 84px is four of
+     them plus the stepper. Fixed, so a column of them lines up. */
+  .row input[type="number"] {
+    @apply w-21 flex-none text-right;
+  }
+  .row input[type="text"],
+  .row select {
+    @apply w-[150px] flex-none max-[540px]:w-[120px];
+  }
+  .row input:disabled,
+  .row select:disabled {
+    @apply text-faint;
+  }
+}

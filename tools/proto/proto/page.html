@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>PadRemote prototype surface</title>
+<style>
+  :root { color-scheme: dark; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    height: 100%; overflow: hidden; background: #0d0f13; color: #e8eaed;
+    font: 13px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    -webkit-user-select: none; user-select: none;
+    -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+  }
+  #surface {
+    position: fixed; inset: 0;
+    touch-action: none;              /* the single most important line */
+    background:
+      radial-gradient(120% 90% at 50% 0%, #171b22 0%, #0d0f13 70%);
+  }
+  #hud {
+    position: fixed; top: env(safe-area-inset-top, 12px); left: 0; right: 0;
+    display: flex; gap: 14px; justify-content: center; align-items: center;
+    padding: 10px; pointer-events: none; font-variant-numeric: tabular-nums;
+    color: #7d8590;
+  }
+  #dot { width: 9px; height: 9px; border-radius: 50%; background: #d1434d; transition: background .2s; }
+  #dot.on { background: #2ea043; }
+  #gesture { color: #e8eaed; min-width: 5.5em; }
+  #hint {
+    position: fixed; left: 0; right: 0; bottom: max(env(safe-area-inset-bottom, 18px), 18px);
+    text-align: center; color: #4d545c; pointer-events: none; padding: 0 24px;
+  }
+  .blip { position: absolute; width: 54px; height: 54px; margin: -27px 0 0 -27px;
+          border-radius: 50%; border: 1.5px solid #2f6feb88; background: #2f6feb18;
+          pointer-events: none; }
+</style>
+</head>
+<body>
+<div id="surface"></div>
+<div id="hud">
+  <span id="dot"></span>
+  <span id="gesture">idle</span>
+  <span id="rate">0 Hz</span>
+  <span id="lat">— ms</span>
+</div>
+<div id="hint">Prototype surface — one finger moves, tap clicks, two fingers scroll, pinch zooms.</div>
+
+<script>
+// PadRemote milestone-0 prototype surface.
+// Reports RAW touch points only; every decision is made on the desktop.
+
+const surface = document.getElementById('surface');
+const dot = document.getElementById('dot');
+const gestureEl = document.getElementById('gesture');
+const rateEl = document.getElementById('rate');
+const latEl = document.getElementById('lat');
+
+// ---------------------------------------------------------------- suppression
+// Stop the browser from treating this like a web page: no scrolling, no
+// zooming, no selection, no callout menu, no double-tap zoom.
+for (const type of ['contextmenu', 'gesturestart', 'gesturechange', 'gestureend',
+                    'dblclick', 'selectstart', 'dragstart']) {
+  document.addEventListener(type, e => e.preventDefault(), { passive: false });
+}
+for (const type of ['touchstart', 'touchmove', 'touchend', 'touchcancel']) {
+  document.addEventListener(type, e => { if (e.cancelable) e.preventDefault(); },
+                            { passive: false });
+}
+
+// ------------------------------------------------------------------ transport
+const WS_URL = `ws://${location.hostname}:8787`;
+let ws = null, backoff = 500;
+
+function connect() {
+  ws = new WebSocket(WS_URL);
+  ws.binaryType = 'arraybuffer';
+  ws.onopen = () => {
+    backoff = 500;
+    dot.classList.add('on');
+    ws.send(JSON.stringify({ t: 'welcome', v: 1, surface: {
+      wpx: surface.clientWidth, hpx: surface.clientHeight, dpr: devicePixelRatio || 1,
+    }}));
+  };
+  ws.onclose = () => {
+    dot.classList.remove('on');
+    gestureEl.textContent = 'offline';
+    setTimeout(connect, backoff);
+    backoff = Math.min(backoff * 2, 10000);
+  };
+  ws.onerror = () => ws.close();
+  ws.onmessage = ev => {
+    const m = JSON.parse(ev.data);
+    if (m.t === 'state') gestureEl.textContent = m.gesture;
+    else if (m.t === 'echo') latEl.textContent = Math.max(0, Math.round(performance.now() - m.tMs)) + ' ms';
+  };
+}
+connect();
+
+// -------------------------------------------------------------- touch capture
+// Samples are queued as they arrive and flushed once per animation frame, so a
+// 120 Hz digitiser still costs one WebSocket frame per display frame.
+const DOWN = 0, MOVE = 1, UP = 2, CANCEL = 3;
+
+// Mouse pointers are ignored by default. When this page is open on the very
+// computer it controls, the cursor it moves passes over the page, the browser
+// reports that as a mouse pointermove, and the page feeds it straight back - a
+// runaway loop that pins the tab. Add ?mouse=1 to drive it with a trackpad, and
+// pair that with `python -m proto --dry-run` so nothing is injected.
+const ACCEPTED = new Set(['touch', 'pen']);
+if (new URLSearchParams(location.search).get('mouse') === '1') ACCEPTED.add('mouse');
+const accepts = ev => ACCEPTED.has(ev.pointerType);
+
+let queue = [];
+let sampleCount = 0, lastRateT = performance.now();
+// pointerId can be any integer; map it into the byte the protocol allows.
+const idMap = new Map();
+let nextId = 0;
+
+function shortId(pointerId) {
+  if (!idMap.has(pointerId)) idMap.set(pointerId, nextId++ & 0xff);
+  return idMap.get(pointerId);
+}
+
+function push(ev, phase) {
+  const r = surface.getBoundingClientRect();
+  queue.push({
+    t: ev.timeStamp || performance.now(),
+    id: shortId(ev.pointerId),
+    phase,
+    x: (ev.clientX - r.left) / r.width,
+    y: (ev.clientY - r.top) / r.height,
+  });
+  sampleCount++;
+}
+
+surface.addEventListener('pointerdown', ev => {
+  if (!accepts(ev)) return;
+  ev.preventDefault();
+  surface.setPointerCapture(ev.pointerId);
+  push(ev, DOWN);
+  blip(ev);
+}, { passive: false });
+
+surface.addEventListener('pointermove', ev => {
+  if (!accepts(ev)) return;
+  ev.preventDefault();
+  // Coalesced events recover the samples the browser batched into this one
+  // callback - this is what makes movement smooth at high touch rates.
+  const events = ev.getCoalescedEvents ? ev.getCoalescedEvents() : [ev];
+  for (const e of (events.length ? events : [ev])) push(e, MOVE);
+}, { passive: false });
+
+function end(phase) {
+  return ev => {
+    if (!accepts(ev)) return;
+    ev.preventDefault();
+    push(ev, phase);
+    idMap.delete(ev.pointerId);
+    flush();                       // never let a finger-up wait for a frame
+  };
+}
+surface.addEventListener('pointerup', end(UP), { passive: false });
+surface.addEventListener('pointercancel', end(CANCEL), { passive: false });
+surface.addEventListener('lostpointercapture', ev => { idMap.delete(ev.pointerId); });
+
+// --------------------------------------------------------------- binary frame
+// u8 version, u8 count, then per sample: u32 t_ms, u8 id, u8 phase, f32 x, f32 y
+function flush() {
+  if (!queue.length || !ws || ws.readyState !== WebSocket.OPEN) { queue = []; return; }
+  const batch = queue.splice(0, 255);
+  const buf = new ArrayBuffer(2 + 14 * batch.length);
+  const dv = new DataView(buf);
+  dv.setUint8(0, 1);
+  dv.setUint8(1, batch.length);
+  let o = 2;
+  for (const s of batch) {
+    dv.setUint32(o, s.t >>> 0, true);
+    dv.setUint8(o + 4, s.id);
+    dv.setUint8(o + 5, s.phase);
+    dv.setFloat32(o + 6, s.x, true);
+    dv.setFloat32(o + 10, s.y, true);
+    o += 14;
+  }
+  ws.send(buf);
+  queue = [];
+}
+
+function frame(now) {
+  flush();
+  if (now - lastRateT >= 500) {
+    rateEl.textContent = Math.round(sampleCount * 1000 / (now - lastRateT)) + ' Hz';
+    sampleCount = 0; lastRateT = now;
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// ------------------------------------------------------------------- feedback
+function blip(ev) {
+  const el = document.createElement('div');
+  el.className = 'blip';
+  el.style.left = ev.clientX + 'px';
+  el.style.top = ev.clientY + 'px';
+  surface.appendChild(el);
+  el.animate([{ opacity: .9, transform: 'scale(.5)' }, { opacity: 0, transform: 'scale(1.4)' }],
+             { duration: 380, easing: 'ease-out' }).onfinish = () => el.remove();
+}
+</script>
+</body>
+</html>

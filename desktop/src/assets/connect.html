@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0c1018">
+<title>PadRemote</title>
+<style>
+  :root {
+    --bg:#0c1018; --panel:#151c28; --raised:#1d2736; --line:#2b3748;
+    --fg:#edf2fa; --muted:#a7b4c8; --accent:#93a7ff; --warn:#ffb4a2;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    color-scheme:dark;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { min-height:100vh; min-height:100svh; display:grid; place-items:start center;
+    padding:32px max(16px,env(safe-area-inset-left)); background:var(--bg); color:var(--fg);
+    font:15px/1.6 -apple-system,BlinkMacSystemFont,system-ui,sans-serif; }
+  main { width:min(100%,420px); display:grid; gap:16px; }
+  [hidden] { display:none !important; }
+  .brand { display:flex; align-items:center; gap:10px; font-weight:650; }
+  .brand-mark { display:inline-grid; place-items:center; width:34px; height:34px;
+    border:1px solid #6579be; border-radius:10px; background:#252e4b; color:var(--accent); }
+  .card { padding:clamp(20px,5vw,28px); border:1px solid var(--line); border-radius:22px;
+    background:var(--panel); }
+  h1 { font-size:26px; line-height:1.25; font-weight:650; letter-spacing:-.03em; }
+  h2 { font-size:15px; font-weight:600; }
+  .intro { color:var(--muted); margin-top:6px; overflow-wrap:anywhere; }
+  .intro strong { color:var(--fg); font-weight:550; }
+  .connect { text-align:center; }
+  .qr { width:min(100%,240px); margin:22px auto 16px; padding:10px; background:#fff;
+    border-radius:16px; line-height:0; }
+  .qr svg { display:block; width:100%; height:auto; }
+  .no-wifi { margin:22px 0 6px; color:var(--warn); }
+  .hint { color:var(--muted); font-size:13px; }
+  .manual { margin-top:18px; padding-top:14px; border-top:1px solid var(--line);
+    text-align:left; color:var(--muted); font-size:13px; }
+  summary { cursor:pointer; min-height:36px; padding:6px 0; text-align:center; }
+  .manual p { margin:8px 0; }
+  .address { display:block; padding:11px; border-radius:10px; background:var(--bg);
+    color:var(--accent); font:12px/1.6 var(--mono); overflow-wrap:anywhere; }
+  .devices-head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
+  .count { color:var(--muted); font-size:13px; }
+  ul { list-style:none; margin-top:14px; display:grid; gap:8px; }
+  li { display:flex; align-items:center; gap:12px; padding:11px 14px; border-radius:14px;
+    background:var(--raised); }
+  .who { min-width:0; flex:1; }
+  .name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .state { color:var(--muted); font-size:12px; }
+  .state.live { color:var(--accent); }
+  .empty { margin-top:14px; color:var(--muted); font-size:13px; }
+  button { min-height:36px; padding:7px 13px; border:0; border-radius:10px; background:#252e4b;
+    color:var(--accent); font:550 13px/1.4 inherit; cursor:pointer; white-space:nowrap; }
+  button:hover { background:#2d3859; }
+  button.quiet { width:100%; margin-top:14px; background:transparent; color:var(--muted); }
+  button.quiet:hover { color:var(--warn); background:#2b1f24; }
+  button.armed { color:var(--warn); background:#2b1f24; }
+  .primary { display:block; margin-top:22px; padding:11px 16px; border-radius:12px;
+    background:#252e4b; color:var(--accent); font-weight:550; text-decoration:none; }
+  .primary:hover { background:#2d3859; }
+  .reconnect { margin-top:14px; color:var(--warn); font-size:13px; }
+  .more { display:flex; justify-content:center; gap:8px; }
+  .more a { padding:8px 14px; border-radius:10px; color:var(--muted); text-decoration:none;
+    font-size:13px; }
+  .more a:hover { color:var(--fg); background:var(--panel); }
+  a:focus-visible, button:focus-visible, summary:focus-visible {
+    outline:2px solid var(--accent); outline-offset:3px; }
+  @media (prefers-reduced-motion:no-preference) { li { transition:background .15s; } }
+</style>
+</head>
+<body>
+<main>
+  <div class="brand"><span class="brand-mark" aria-hidden="true">••</span>PadRemote</div>
+
+  <section id="connect" class="card connect">
+    <h1>Connect a device</h1>
+    <p class="intro">A wireless trackpad for <strong>__COMPUTER__</strong>.</p>
+    __QR__
+    <details class="manual">
+      <summary>Can’t scan?</summary>
+      <p>Open this address on the phone instead. Keep PadRemote running here.</p>
+      <a class="address" href="__URL__">__URL__</a>
+    </details>
+  </section>
+
+  <!-- Step two. Pairing is a thing you do once, and a QR code is no use to
+       someone whose phone is already a trackpad - so once a device has
+       authenticated this replaces the code with the thing to try next, and
+       the way to change what the gestures do. -->
+  <section id="paired" class="card connect" hidden>
+    <h1 id="paired-title">Move a finger on the trackpad</h1>
+    <p id="paired-intro" class="intro"><strong id="paired-who">Your phone</strong> is driving
+      <strong>__COMPUTER__</strong>.</p>
+    <p id="paired-lost" class="reconnect" hidden>It has dropped off. PadRemote is still
+      listening, and it reconnects on its own.</p>
+    <a class="primary" href="__CONFIG_URL__">Settings &amp; gestures</a>
+    <button id="show-qr" class="quiet" type="button">Add another device</button>
+  </section>
+
+  <section class="card" aria-labelledby="devices-title">
+    <div class="devices-head">
+      <h2 id="devices-title">Devices</h2>
+      <span id="count" class="count" role="status">Waiting for your phone…</span>
+    </div>
+    <ul id="list"></ul>
+    <p id="empty" class="empty">Nothing paired yet. Scan the code above to add a device.</p>
+    <button id="forget-all" class="quiet" type="button" hidden>Forget all devices</button>
+    <p id="note" class="hint" style="margin-top:10px" hidden></p>
+  </section>
+
+  <nav class="more" aria-label="More">
+    <a href="__CONFIG_URL__">Settings</a>
+    <a href="__DEBUG_URL__">Diagnostics</a>
+  </nav>
+  <noscript><p class="hint">Enable JavaScript to see and manage paired devices.</p></noscript>
+</main>
+<script>
+(() => {
+  const KEY = "__KEY__";
+  // The address the QR above was drawn around, so the page can tell when the
+  // router has moved this computer out from under it.
+  const HOST = "__IP__";
+  const el = (id) => document.getElementById(id);
+  const list = el("list"), count = el("count"), empty = el("empty");
+  const forgetAll = el("forget-all"), note = el("note");
+  const connectCard = el("connect"), pairedCard = el("paired");
+  const pairedIntro = el("paired-intro"), pairedWho = el("paired-who");
+  const pairedLost = el("paired-lost"), showQr = el("show-qr");
+
+  // Has a trackpad ever authenticated while this page was open?
+  //
+  // The page advances on the first one and does not go back on its own: a phone
+  // that drops off needs "it is coming back", not the code it already scanned -
+  // and re-showing a QR every time a screen locks is how a paired user ends up
+  // scanning twice. Only `showQr` returns to step one, and `qrBaseline` is the
+  // count it was asked at, so the code goes away again once it has been used.
+  let everConnected = false, qrBaseline = null;
+
+  // Which of the two cards is on screen, decided in one place from the flags
+  // above and the live count.
+  function step(msg) {
+    if (msg.connected > 0) everConnected = true;
+    // Forgetting the last device empties the list, and there is genuinely
+    // nothing paired again - so the code comes back rather than leaving "move a
+    // finger on the trackpad" above a list with nothing in it.
+    if (msg.devices.length === 0) everConnected = false;
+    if (qrBaseline !== null && msg.connected > qrBaseline) qrBaseline = null;
+    const advanced = everConnected && qrBaseline === null;
+    connectCard.hidden = advanced;
+    pairedCard.hidden = !advanced;
+    // Named while it is here, because "your phone" is the wrong words on a
+    // computer driven by an iPad, and wronger still with both connected.
+    const driving = msg.devices.find((d) => d.driving) || msg.devices.find((d) => d.connected);
+    if (driving) pairedWho.textContent = driving.name || "Your device";
+    // On a drop the guide stays and the line under it changes, so the answer to
+    // "what do I do now" does not vanish along with the connection.
+    pairedIntro.hidden = msg.connected === 0;
+    pairedLost.hidden = msg.connected > 0;
+  }
+
+  showQr.onclick = () => {
+    qrBaseline = connectedNow;
+    connectCard.hidden = false;
+    pairedCard.hidden = true;
+    connectCard.scrollIntoView?.({ block: "start" });
+  };
+
+  function say(text) {
+    note.textContent = text;
+    note.hidden = !text;
+  }
+
+  // HMAC-SHA256 through Web Crypto, which needs a secure context. This page is
+  // opened on localhost, which is one; the QR the phone scans is not, and the
+  // phone page carries its own implementation for exactly that reason.
+  async function answer(nonce) {
+    const raw = Uint8Array.from(KEY.match(/../g) || [], (h) => parseInt(h, 16));
+    const key = await crypto.subtle.importKey("raw", raw, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+    const sig = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(nonce)));
+    return [...sig].map((b) => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  // Three different things to say, because "0 devices connected" answers a
+  // question nobody asked: before anything is paired the next step is to scan,
+  // and afterwards the interesting part is that nothing is on right now.
+  function summarise(msg) {
+    if (msg.connected === 1) return "1 device connected";
+    if (msg.connected > 1) return msg.connected + " devices connected";
+    return msg.devices.length ? "None connected" : "Waiting for your phone…";
+  }
+
+  let connectedNow = 0;
+
+  function render(msg) {
+    connectedNow = msg.connected;
+    count.textContent = summarise(msg);
+    list.replaceChildren();
+    for (const device of msg.devices) {
+      const row = document.createElement("li");
+      const who = document.createElement("div");
+      who.className = "who";
+      const name = document.createElement("div");
+      name.className = "name";
+      name.textContent = device.name || "Unnamed device";
+      const state = document.createElement("div");
+      state.className = device.connected ? "state live" : "state";
+      state.textContent = device.driving
+        ? "Using the cursor"
+        : device.connected
+          ? "Connected"
+          : "Not connected";
+      who.append(name, state);
+      row.append(who);
+      // A device with no credential of its own - the replay tool - is listed so
+      // the rows match the count, and has nothing to revoke.
+      if (device.id && msg.manage) {
+        const forget = document.createElement("button");
+        forget.type = "button";
+        forget.textContent = "Forget";
+        // Every row's button says the same word, so the name has to be in the
+        // label or a screen reader reads a list of identical buttons.
+        forget.setAttribute("aria-label", "Forget " + name.textContent);
+        forget.onclick = () => send({ t: "forget", id: device.id });
+        row.append(forget);
+      }
+      list.append(row);
+    }
+    empty.hidden = msg.devices.length > 0;
+    forgetAll.hidden = !(msg.manage && msg.devices.some((d) => d.id));
+    // Only when it goes away: a list that redraws while somebody is reading
+    // the confirmation should not quietly cancel it under them.
+    if (forgetAll.hidden) disarm();
+  }
+
+  let socket = null, backoff = 500, reloading = false;
+
+  function send(message) {
+    if (socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));
+  }
+
+  function connect() {
+    const ws = new WebSocket("ws://" + location.host + "/devices");
+    socket = ws;
+    ws.onmessage = async (event) => {
+      let msg;
+      try { msg = JSON.parse(event.data); } catch { return; }
+      if (msg.t === "challenge") ws.send(JSON.stringify({ t: "auth", hmac: await answer(msg.nonce) }));
+      else if (msg.t === "devices") {
+        backoff = 500;
+        // A new address means the code on screen now points at nothing. The
+        // page is rendered by the app, so reloading is all it takes to fix.
+        if ((msg.host || "") !== HOST) { reloading = true; ws.close(); return; }
+        say("");
+        step(msg);
+        render(msg);
+      }
+      else if (msg.t === "error") say(msg.detail);
+    };
+    ws.onerror = () => ws.close();
+    ws.onclose = () => {
+      socket = null;
+      // Forgetting everything replaces the pairing secret, so this page's key -
+      // and the code on it - are stale the moment the socket drops. Reloading
+      // is what puts a working QR back on screen.
+      if (reloading) { location.reload(); return; }
+      count.textContent = "Reconnecting…";
+      setTimeout(connect, backoff);
+      backoff = Math.min(backoff * 2, 5000);
+    };
+  }
+
+  // Two taps rather than a dialog: this revokes every device and replaces the
+  // code, and a single stray click should not be able to do that.
+  let armed = null;
+  function disarm() {
+    clearTimeout(armed);
+    armed = null;
+    forgetAll.classList.remove("armed");
+    forgetAll.textContent = "Forget all devices";
+  }
+  forgetAll.onclick = () => {
+    if (!armed) {
+      forgetAll.classList.add("armed");
+      forgetAll.textContent = "Forget all devices? Click again";
+      armed = setTimeout(disarm, 5000);
+      return;
+    }
+    disarm();
+    reloading = true;
+    send({ t: "forgetAll" });
+  };
+
+  if (!window.isSecureContext || !crypto.subtle) {
+    // Reached only by opening this computer's own LAN address by hand; the QR
+    // above still works, because it is drawn on the server.
+    count.textContent = "";
+    empty.hidden = true;
+    say("Open http://localhost:__PORT__ on this computer to see and manage devices.");
+  } else {
+    connect();
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,64 @@
+{
+ "name": "double_tap",
+ "description": "two taps inside doubleTapMs -> click, then click with count 2",
+ "surface": {
+  "wpx": 390.0,
+  "hpx": 716.0
+ },
+ "samples": [
+  {
+   "t_ms": 0,
+   "pointer_id": 0,
+   "phase": 0,
+   "x": 0.512821,
+   "y": 0.418994
+  },
+  {
+   "t_ms": 70,
+   "pointer_id": 0,
+   "phase": 2,
+   "x": 0.512821,
+   "y": 0.418994
+  },
+  {
+   "t_ms": 160,
+   "pointer_id": 0,
+   "phase": 0,
+   "x": 0.512821,
+   "y": 0.418994
+  },
+  {
+   "t_ms": 230,
+   "pointer_id": 0,
+   "phase": 2,
+   "x": 0.512821,
+   "y": 0.418994
+  }
+ ],
+ "expect": {
+  "kinds": [
+   "click",
+   "click"
+  ],
+  "clicks": [
+   {
+    "button": "left",
+    "count": 1
+   },
+   {
+    "button": "left",
+    "count": 2
+   }
+  ],
+  "net_move": [
+   0,
+   0
+  ],
+  "net_scroll": [
+   0,
+   0
+  ],
+  "net_zoom": 0,
+  "scroll_phases": []
+ }
+}

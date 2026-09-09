@@ -1,0 +1,71 @@
+# Supply chain policy for `cargo deny`, run in CI.
+#
+# For an app that injects input into the machine it runs on, the realistic
+# attack is not the wire protocol - it is a dependency. PadRemote's own code is
+# small enough to read; the tree under it is a few hundred crates, and this is
+# what watches them.
+#
+#   cargo deny check
+#
+# The three things it is here for, in order of how much they matter:
+#
+#   advisories  a known vulnerability in anything we ship fails the build,
+#               rather than sitting in a lockfile for a year unnoticed.
+#   sources     every crate must come from crates.io. A git dependency is how
+#               a compromised or typo-squatted fork gets in without anyone
+#               reading a diff, and this repository has no reason to have one.
+#   bans        the crypto in `src/auth.rs` must be exactly one implementation.
+#               Two versions of `sha2` in the tree means one of them is not the
+#               one being audited.
+
+[advisories]
+version = 2
+yanked = "deny"
+# Only our *own* dependencies have to be maintained crates. Set to "all", this
+# fails on nine RUSTSEC advisories for the GTK3 bindings that `tray-icon` pulls
+# in for Linux - a platform this app does not ship, through a crate we do not
+# choose, for a reason ("no longer maintained") that no change here can fix.
+# A check that cannot pass is a check that gets turned off, and turning this one
+# off would also silence the vulnerabilities. Those are always errors, at any
+# depth, and that is the part that matters.
+unmaintained = "workspace"
+# No ignores. Every entry that ever appears here needs a comment saying why the
+# advisory does not apply *and* what would let it be removed - an ignore list
+# with no expiry is how a project ends up shipping a known hole on purpose.
+ignore = []
+
+[bans]
+# Duplicates are normal in a tree this size and not worth failing over...
+multiple-versions = "warn"
+wildcards = "deny"
+# ...except for a TLS stack nobody chose: the link is plain `ws://` today and
+# when that changes it should be `rustls`, decided in a commit message rather
+# than pulled in sideways by a dependency.
+deny = [{ name = "openssl" }, { name = "openssl-sys" }]
+
+[licenses]
+version = 2
+# Permissive licenses only. Not a legal position so much as an alarm: a copyleft
+# crate appearing in the tree of an MIT app is a thing to notice deliberately
+# rather than discover at release.
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",
+    "Unlicense",
+    "Zlib",
+    "0BSD",
+    # `option-ext`, pulled in by `dirs`, which is how the app finds the config
+    # directory. File-level copyleft, used unmodified as a library, which the
+    # MPL explicitly allows.
+    "MPL-2.0",
+]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

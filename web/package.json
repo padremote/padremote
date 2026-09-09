@@ -1,0 +1,32 @@
+{
+  "name": "padremote-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "PadRemote phone surface - the page that turns a touchscreen into a trackpad",
+  "scripts": {
+    "build": "tsc --noEmit && vite build",
+    "check": "npm run typecheck && npm run check:launch && npm run check:hold && npm run check:hmac && npm run check:link && npm run check:intro && npm run check:shake && npm run check:surface && npm run check:mobile && npm run check:settings && npm run check:connect",
+    "check:launch": "node scripts/check-launch.mjs",
+    "check:hold": "node scripts/check-hold-ring.mjs",
+    "check:hmac": "node scripts/check-hmac.mjs",
+    "check:link": "node scripts/check-link.mjs",
+    "check:intro": "node scripts/check-hold-intro.mjs",
+    "check:mobile": "node scripts/check-mobile-ui.mjs",
+    "check:settings": "node scripts/check-settings.mjs",
+    "check:shake": "node scripts/check-shake.mjs",
+    "check:surface": "node scripts/check-surface.mjs",
+    "dev": "vite --host",
+    "mock": "node scripts/mock-desktop.mjs",
+    "preview": "vite preview --host",
+    "typecheck": "tsc --noEmit",
+    "check:connect": "node scripts/check-connect.mjs"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10"
+  },
+  "license": "MIT"
+}

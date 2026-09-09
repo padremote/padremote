@@ -1,0 +1,188 @@
+{
+ "name": "tap_and_drag",
+ "description": "tap then immediate press and move -> click then a held drag",
+ "surface": {
+  "wpx": 390.0,
+  "hpx": 716.0
+ },
+ "samples": [
+  {
+   "t_ms": 0,
+   "pointer_id": 0,
+   "phase": 0,
+   "x": 0.384615,
+   "y": 0.558659
+  },
+  {
+   "t_ms": 70,
+   "pointer_id": 0,
+   "phase": 2,
+   "x": 0.384615,
+   "y": 0.558659
+  },
+  {
+   "t_ms": 160,
+   "pointer_id": 0,
+   "phase": 0,
+   "x": 0.384615,
+   "y": 0.558659
+  },
+  {
+   "t_ms": 168,
+   "pointer_id": 0,
+   "phase": 1,
+   "x": 0.405449,
+   "y": 0.558659
+  },
+  {
+   "t_ms": 176,
+   "pointer_id": 0,
+   "phase": 1,
+   "x": 0.426282,
+   "y": 0.558659
+  },
+  {
+   "t_ms": 184,
+   "pointer_id": 0,
+   "phase": 1,
+   "x": 0.447115,
+   "y": 0.558659
+  },
+  {
+   "t_ms": 192,
+   "pointer_id": 0,
+   "phase": 1,
+   "x": 0.467949,
+   "y": 0.558659
+  },
+  {
+   "t_ms": 200,
+   "pointer_id": 0,
+   "phase": 1,
+   "x": 0.488782,
+   "y": 0.558659
+  },
+  {
+   "t_ms": 208,
+   "pointer_id": 0,
+   "phase": 1,
+   "x": 0.509615,
+   "y": 0.558659
+  },
+  {
+   "t_ms": 216,
+   "pointer_id": 0,
+   "phase": 1,
+   "x": 0.530449,
+   "y": 0.558659
+  },
+  {
+   "t_ms": 224,
+   "pointer_id": 0,
+   "phase": 1,
+   "x": 0.551282,
+   "y": 0.558659
+  },
+  {
+   "t_ms": 232,
+   "pointer_id": 0,
+   "phase": 1,
+   "x": 0.572115,
+   "y": 0.558659
+  },
+  {
+   "t_ms": 240,
+   "pointer_id": 0,
+   "phase": 1,
+   "x": 0.592949,
+   "y": 0.558659
+  },
+  {
+   "t_ms": 248,
+   "pointer_id": 0,
+   "phase": 1,
+   "x": 0.613782,
+   "y": 0.558659
+  },
+  {
+   "t_ms": 256,
+   "pointer_id": 0,
+   "phase": 1,
+   "x": 0.634615,
+   "y": 0.558659
+  },
+  {
+   "t_ms": 264,
+   "pointer_id": 0,
+   "phase": 1,
+   "x": 0.655449,
+   "y": 0.558659
+  },
+  {
+   "t_ms": 272,
+   "pointer_id": 0,
+   "phase": 1,
+   "x": 0.676282,
+   "y": 0.558659
+  },
+  {
+   "t_ms": 280,
+   "pointer_id": 0,
+   "phase": 1,
+   "x": 0.697115,
+   "y": 0.558659
+  },
+  {
+   "t_ms": 288,
+   "pointer_id": 0,
+   "phase": 1,
+   "x": 0.717949,
+   "y": 0.558659
+  },
+  {
+   "t_ms": 288,
+   "pointer_id": 0,
+   "phase": 2,
+   "x": 0.717949,
+   "y": 0.558659
+  }
+ ],
+ "expect": {
+  "kinds": [
+   "click",
+   "button_down",
+   "move",
+   "move",
+   "move",
+   "move",
+   "move",
+   "move",
+   "move",
+   "move",
+   "move",
+   "move",
+   "move",
+   "move",
+   "move",
+   "move",
+   "move",
+   "button_up"
+  ],
+  "clicks": [
+   {
+    "button": "left",
+    "count": 1
+   }
+  ],
+  "net_move": [
+   306.0,
+   0.0
+  ],
+  "net_scroll": [
+   0,
+   0
+  ],
+  "net_zoom": 0,
+  "scroll_phases": []
+ }
+}

@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0c1018" />
+  <title>PadRemote · Feedback check</title>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+</head>
+<!-- A normal scrolling page, even though the probes borrow the pad's feel. -->
+<body class="mx-auto min-h-full max-w-[800px] select-text text-base [-webkit-text-size-adjust:100%]
+             pb-[max(40px,env(safe-area-inset-bottom))] pl-[max(20px,env(safe-area-inset-left))] pr-[max(20px,env(safe-area-inset-right))]
+             max-[480px]:pl-[max(16px,env(safe-area-inset-left))] max-[480px]:pr-[max(16px,env(safe-area-inset-right))]">
+  <header class="flex items-center justify-between gap-5 border-b border-line pb-[18px]
+                 pt-[max(18px,env(safe-area-inset-top))] max-[480px]:gap-3">
+    <a class="text-[17px] font-bold text-fg no-underline" data-app-link href="/">PadRemote</a>
+    <nav class="flex gap-2 max-[480px]:gap-0" aria-label="Main navigation">
+      <a class="inline-flex min-h-11 items-center justify-center rounded-xl px-3 py-2 text-sm text-muted no-underline hover:bg-raised hover:text-fg max-[480px]:px-2.5 max-[480px]:text-[13px]" data-app-link href="/">Trackpad</a>
+      <a class="inline-flex min-h-11 items-center justify-center rounded-xl px-3 py-2 text-sm text-muted no-underline hover:bg-raised hover:text-fg max-[480px]:px-2.5 max-[480px]:text-[13px]" data-app-link href="/config.html">Settings</a>
+    </nav>
+  </header>
+
+  <main class="grid gap-[18px] pt-8 max-[480px]:gap-4 max-[480px]:pt-[26px]">
+    <div class="pb-2">
+      <p class="mb-2 text-[13px] font-semibold text-accent">Troubleshooting</p>
+      <h1 class="mb-3 text-[clamp(28px,6vw,36px)] font-[650] leading-[1.2] tracking-[-.035em]">Feel every press</h1>
+      <p class="text-base leading-[1.65] text-muted">Check vibration and click sounds on the phone or tablet you use as your trackpad.</p>
+    </div>
+
+    <section class="panel min-w-0 rounded-[22px] max-[480px]:rounded-[18px] max-[480px]:p-5">
+      <h2 class="mb-2 text-[17px] font-semibold leading-[1.4] [&_small]:ml-2 [&_small]:text-xs [&_small]:font-normal [&_small]:leading-[1.4] [&_small]:text-muted">Try a vibration</h2>
+      <p class="mb-[18px] text-sm leading-[1.65] text-muted [&_b]:font-medium [&_b]:text-fg">Tap the button and feel for a short buzz. Your result will appear below.</p>
+      <div class="grid gap-2.5">
+        <button id="t-click" type="button" class="relative flex min-h-[76px] w-full cursor-pointer flex-col items-start gap-1 overflow-hidden rounded-[14px] border border-accent bg-accent px-[18px] py-4 text-left text-[15px]/[1.4] font-semibold text-bg select-none active:brightness-110 [&_small]:text-[13px] [&_small]:font-normal [&_small]:text-bg [&_small]:opacity-80">1 · Test vibration<small>Tap once for a short pulse</small></button>
+      </div>
+      <!-- The verdict colours itself; `haptics-test.ts` sets `ok` or `bad`. -->
+      <div id="verdict" role="status" hidden
+           class="mt-[18px] rounded-[14px] p-4 text-sm leading-[1.6] [overflow-wrap:anywhere] [&_b]:text-fg
+                  [&.ok]:border [&.ok]:border-[#2d5747] [&.ok]:bg-[#18362c] [&.ok]:text-[#b7f0d4]
+                  [&.bad]:border [&.bad]:border-[#62404a] [&.bad]:bg-[#362128] [&.bad]:text-[#ffc7d1]"></div>
+    </section>
+
+    <section class="panel min-w-0 rounded-[22px] max-[480px]:rounded-[18px] max-[480px]:p-5">
+      <h2 class="mb-2 text-[17px] font-semibold leading-[1.4] [&_small]:ml-2 [&_small]:text-xs [&_small]:font-normal [&_small]:leading-[1.4] [&_small]:text-muted">Prefer a click sound?</h2>
+      <p class="mb-[18px] text-sm leading-[1.65] text-muted [&_b]:font-medium [&_b]:text-fg">Sound gives you press and release feedback when vibration is unavailable.</p>
+      <div class="grid gap-2.5">
+        <button id="t-sound" type="button" class="relative flex min-h-[76px] w-full cursor-pointer flex-col items-start gap-1 overflow-hidden rounded-[14px] border border-line bg-raised px-[18px] py-4 text-left text-[15px]/[1.4] font-semibold text-fg select-none active:border-accent active:brightness-110 [&_small]:text-[13px] [&_small]:font-normal [&_small]:text-muted">Play click sound<small>Listen for the press, then the release</small></button>
+      </div>
+      <p class="mt-4 text-sm leading-[1.65] text-muted [&_b]:font-medium [&_b]:text-fg">If you hear nothing, check your device’s volume and silent mode. Enable <b>Click sound</b> in the trackpad’s quick settings to use it while dragging.</p>
+    </section>
+
+    <section class="panel min-w-0 rounded-[22px] max-[480px]:rounded-[18px] max-[480px]:p-5">
+      <h2 class="mb-2 text-[17px] font-semibold leading-[1.4] [&_small]:ml-2 [&_small]:text-xs [&_small]:font-normal [&_small]:leading-[1.4] [&_small]:text-muted">Results <small>Newest first</small></h2>
+      <ul id="log" class="max-h-[420px] list-none overflow-auto
+                          empty:after:block empty:after:pt-1 empty:after:text-sm empty:after:text-muted
+                          empty:after:content-['Your_results_will_appear_here_after_a_test.']
+                          [&_li]:flex [&_li]:flex-wrap [&_li]:items-center [&_li]:gap-x-2.5 [&_li]:gap-y-1.5
+                          [&_li]:border-t [&_li]:border-line [&_li]:py-[14px] [&_li]:text-[13px] [&_li]:[overflow-wrap:anywhere]
+                          [&_li:first-child]:border-t-0
+                          [&_time]:tabular-nums [&_time]:text-muted
+                          [&_b]:min-w-[12ch] [&_b]:flex-1 [&_b]:font-medium
+                          [&_i]:w-full [&_i]:not-italic [&_i]:text-xs [&_i]:text-muted" aria-label="Feedback test results" aria-live="polite"></ul>
+    </section>
+
+    <details class="panel min-w-0 rounded-[22px] max-[480px]:rounded-[18px] max-[480px]:p-5 group py-3 open:pb-6">
+      <summary class="min-h-11 cursor-pointer px-0.5 py-2.5 font-semibold text-fg marker:text-accent group-open:mb-2.5">More vibration tests</summary>
+      <p class="mb-[18px] text-sm leading-[1.65] text-muted [&_b]:font-medium [&_b]:text-fg">These tests help find which touch events your browser accepts. Run them in order. Once vibration is allowed, later tests may behave differently; reload before starting another run.</p>
+      <div class="grid gap-2.5">
+        <button id="t-start" type="button" class="relative flex min-h-[76px] w-full cursor-pointer flex-col items-start gap-1 overflow-hidden rounded-[14px] border border-line bg-raised px-[18px] py-4 text-left text-[15px]/[1.4] font-semibold text-fg select-none active:border-accent active:brightness-110 [&_small]:text-[13px] [&_small]:font-normal [&_small]:text-muted">2 · Press down<small>Tests the moment your finger touches the screen</small></button>
+        <button id="t-end" type="button" class="relative flex min-h-[76px] w-full cursor-pointer flex-col items-start gap-1 overflow-hidden rounded-[14px] border border-line bg-raised px-[18px] py-4 text-left text-[15px]/[1.4] font-semibold text-fg select-none active:border-accent active:brightness-110 [&_small]:text-[13px] [&_small]:font-normal [&_small]:text-muted">3 · Touch and release<small>Tests the moment your finger lifts</small></button>
+        <!-- Fills as the finger stays down, so how long "half a second" is is
+             something you watch rather than something you are told. `--fill` is
+             set by `haptics-test.ts` on every frame of the hold. -->
+        <button id="t-hold" type="button" class="relative flex min-h-[76px] w-full cursor-pointer flex-col items-start gap-1 overflow-hidden rounded-[14px] border border-line bg-raised px-[18px] py-4 text-left text-[15px]/[1.4] font-semibold text-fg select-none active:border-accent active:brightness-110 [&_small]:text-[13px] [&_small]:font-normal [&_small]:text-muted before:pointer-events-none before:absolute before:inset-y-0 before:left-0 before:w-[var(--fill,0%)] before:bg-accent before:opacity-20 before:content-['']">4 · Hold for half a second<small>Tests feedback while your finger stays down</small></button>
+        <button id="t-long" type="button" class="relative flex min-h-[76px] w-full cursor-pointer flex-col items-start gap-1 overflow-hidden rounded-[14px] border border-line bg-raised px-[18px] py-4 text-left text-[15px]/[1.4] font-semibold text-fg select-none active:border-accent active:brightness-110 [&_small]:text-[13px] [&_small]:font-normal [&_small]:text-muted">5 · Try a longer vibration<small>A continuous two-second pulse</small></button>
+        <button id="t-pattern" type="button" class="relative flex min-h-[76px] w-full cursor-pointer flex-col items-start gap-1 overflow-hidden rounded-[14px] border border-line bg-raised px-[18px] py-4 text-left text-[15px]/[1.4] font-semibold text-fg select-none active:border-accent active:brightness-110 [&_small]:text-[13px] [&_small]:font-normal [&_small]:text-muted">6 · Try three short pulses<small>A repeating vibration pattern</small></button>
+      </div>
+      <button id="reload" type="button" class="btn mt-[14px] w-full border-line bg-transparent p-3 text-sm font-medium text-accent">Reload and start again</button>
+    </details>
+
+    <details class="panel min-w-0 rounded-[22px] max-[480px]:rounded-[18px] max-[480px]:p-5 group py-3 open:pb-6">
+      <summary class="min-h-11 cursor-pointer px-0.5 py-2.5 font-semibold text-fg marker:text-accent group-open:mb-2.5">Browser details</summary>
+      <p class="mb-[18px] text-sm leading-[1.65] text-muted [&_b]:font-medium [&_b]:text-fg">Technical information for diagnosing feedback support.</p>
+      <!-- Two columns of prose in 320px is two columns of one word, so below
+           480 each row becomes a block and its cells stack inside it. -->
+      <table id="env" class="w-full table-fixed border-collapse text-[13px]
+                             [&_td]:border-t [&_td]:border-line [&_td]:px-2 [&_td]:py-3 [&_td]:align-top [&_td]:[overflow-wrap:anywhere]
+                             [&_td:first-child]:w-2/5 [&_td:first-child]:pl-0 [&_td:first-child]:text-muted [&_td:last-child]:pr-0
+                             [&_.tag]:max-w-full [&_.tag]:whitespace-normal
+                             max-[480px]:[&_tr]:block max-[480px]:[&_tr]:border-t max-[480px]:[&_tr]:border-line max-[480px]:[&_tr]:py-2
+                             max-[480px]:[&_td]:block max-[480px]:[&_td]:w-full max-[480px]:[&_td]:border-0 max-[480px]:[&_td]:px-0 max-[480px]:[&_td]:py-1
+                             max-[480px]:[&_td:first-child]:w-full" aria-label="Browser feedback capabilities"></table>
+    </details>
+
+    <details class="panel min-w-0 rounded-[22px] max-[480px]:rounded-[18px] max-[480px]:p-5 group py-3 open:pb-6">
+      <summary class="min-h-11 cursor-pointer px-0.5 py-2.5 font-semibold text-fg marker:text-accent group-open:mb-2.5">Vibration accepted, but nothing happens?</summary>
+      <p class="mb-[18px] text-sm leading-[1.65] text-muted [&_b]:font-medium [&_b]:text-fg">An accepted result means the browser accepted the request. It does not confirm that the device vibrated.</p>
+      <ol class="list-decimal pl-[22px] text-sm leading-[1.65] text-muted [&_b]:text-fg
+                 [&>li]:mb-2.5 [&>li]:pl-1 [&>li:last-child]:mb-0">
+        <li>Check that your device has a vibration motor. Some tablets do not.</li>
+        <li>In your device’s sound settings, check vibration intensity and touch feedback.</li>
+        <li>Try an action that normally vibrates elsewhere on your device. If it is also silent, check your device settings.</li>
+        <li>Use <b>Click sound</b> for press feedback if vibration is unavailable.</li>
+      </ol>
+    </details>
+  </main>
+
+  <script type="module" src="/src/haptics-test.ts"></script>
+</body>
+</html>

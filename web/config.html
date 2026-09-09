@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0c1018" />
+  <title>PadRemote · Settings</title>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+</head>
+<!-- `--page-width` is how wide the page is *allowed* to be, and it changes with
+     what is on it: a column of settings wants a measure, three columns of
+     gestures want the window. Set here per `data-page` so the bar and the panel
+     below it can never disagree about where the page's edges are.
+     `--chrome-top` is what the sticky header takes off the top, which is what a
+     scroll target has to clear. -->
+<body data-page="home"
+      class="mx-auto max-w-[1240px] overflow-x-clip px-4 pb-[calc(56px+env(safe-area-inset-bottom))]
+             max-[540px]:px-3
+             [--chrome-top:72px] [--page-width:780px]
+             data-[page=home]:[--page-width:860px]
+             data-[page=basics]:[--page-width:680px]
+             data-[page=advanced]:[--page-width:680px]
+             data-[page=gestures]:[--page-width:1240px]
+             paned:data-[page=gestures]:flex paned:data-[page=gestures]:h-dvh paned:data-[page=gestures]:flex-col
+             paned:data-[page=gestures]:pb-[calc(16px+env(safe-area-inset-bottom))]">
+  <!-- One bar, one line: where you are, the way back, and whether the computer
+       is listening. The title used to sit under it in a block of its own with a
+       sentence beneath that, which is 150px of chrome above every page on a
+       screen that is mostly not tall.
+
+       Sticky, so the status can wrap without ever overlapping the navigation -
+       except on a window too short to spare the room, where it goes back to
+       being part of the page. -->
+  <div class="sticky top-0 z-[3] bg-bg pb-2 flat:static">
+  <header id="bar" class="mx-auto flex w-full max-w-[var(--page-width)] flex-wrap items-center gap-3 bg-bg
+                          pb-1.5 pt-[calc(6px+env(safe-area-inset-top))] max-[620px]:gap-y-2">
+    <!-- Pulled left by its own padding, so the words line up with the page
+         while the box that appears under them on hover has air on both sides. -->
+    <a id="back" class="btn btn-bare -ml-3 min-h-[38px] pl-2.5" href="/"><span aria-hidden="true">‹</span> <span id="back-label">Trackpad</span></a>
+    <h1 id="page-title" class="mr-auto min-w-0 truncate text-lg font-semibold tracking-[-.02em]">Settings</h1>
+    <p id="connection" class="flex min-w-0 items-center gap-2 text-[13px] text-muted max-[620px]:order-3 max-[620px]:flex-[1_0_100%]" role="status">
+      <span id="dot" class="dot connecting" aria-hidden="true"></span>
+      <span id="computer" class="truncate">Connecting to your computer…</span>
+    </p>
+    <p id="saved" class="text-[13px] font-[550] tabular-nums max-[620px]:not-empty:order-4" role="status" aria-live="polite"></p>
+  </header>
+  </div>
+
+  <main class="block pt-1.5
+               paned:[body[data-page=gestures]_&]:flex paned:[body[data-page=gestures]_&]:min-h-0 paned:[body[data-page=gestures]_&]:flex-1">
+    <!-- HOME: who is connected, and the way in to everything else.
+         The devices are *on* this page rather than behind a card of their own:
+         it is a short list that answers its question by being read, and a card
+         saying "2 connected" is a tap charged for information that fits in the
+         space the tap was going to use. What is left is navigation, and three
+         cards that are all the same kind of thing read as one thing. -->
+    <section id="panel-home" class="page mx-auto grid w-full min-w-0 max-w-[var(--page-width)] gap-[14px] focus:outline-none [.offline_&]:opacity-[.72] [body[data-direction=in]_&]:animate-page-in [body[data-direction=out]_&]:animate-page-out" aria-label="Settings" tabindex="-1">
+      <section class="panel grid gap-4 max-[540px]:rounded-2xl max-[540px]:p-[18px]">
+        <h2 class="text-lg font-semibold leading-[1.35] tracking-[-.015em]">Connected devices <small id="device-count" class="mt-[7px] block text-[13px] font-normal leading-[1.5] tracking-normal text-muted">Looking…</small></h2>
+        <ul id="device-rows" class="grid list-none"></ul>
+        <p id="device-empty" class="text-[13px] text-dim" hidden>Nothing is paired yet. Scan the QR code on your computer.</p>
+        <p id="device-note" class="text-[13px] text-dim" hidden>Devices are forgotten from PadRemote on your computer.</p>
+        <!-- Un-pairing everything is rare and irreversible, so it is one quiet
+             line under the list rather than a panel of its own. Given equal
+             weight to the list it destroys, it was the loudest thing on the
+             page. -->
+        <div id="forget-panel" class="grid justify-items-start gap-3 pt-1" hidden>
+          <!-- Pulled left by exactly its own padding rather than having the
+               padding taken away, so the words still line up with the rows
+               above while the box that appears under them on hover has the same
+               air on both sides. Set flush, the text sat against its own left
+               edge the moment it lit up. -->
+          <button id="forget-all" class="btn btn-bare -ml-4 text-bad" type="button">Forget all devices…</button>
+          <p id="forget-confirm" class="flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-bad bg-raised p-[14px] text-sm w-full" hidden>
+            <span>Un-pair every device from <b id="forget-name">this computer</b>? Each one has to scan the code again.</span>
+            <span class="flex gap-2">
+              <button id="forget-no" class="btn btn-bare" type="button">Cancel</button>
+              <button id="forget-yes" class="btn btn-primary" type="button">Forget all</button>
+            </span>
+          </p>
+        </div>
+      </section>
+
+      <!-- Three abreast once there is room. Three equal cards in a row under a
+           full-width panel is a shape that sits still; the 2x2 block this
+           replaced had no anchor above it and nothing below it, and read as a
+           menu adrift near the top of an empty window.
+
+           At a third of the measure a card laid out icon-then-words leaves
+           about 130px for the words, which wrapped the title onto two lines and
+           left the three cards different heights - so past 820px the card turns
+           on its side and the text gets the whole width of the tile. -->
+      <nav class="grid gap-2.5 min-[820px]:grid-cols-3 min-[820px]:items-stretch" aria-label="Settings sections">
+        <p class="col-span-full mx-0.5 mt-1.5 text-[11px] font-semibold uppercase tracking-[.08em] text-faint">Settings</p>
+        <a class="group grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 rounded-[18px] border border-line bg-panel px-[22px] py-5 text-fg no-underline transition-[background-color,border-color,transform] duration-[180ms] hover:border-edge hover:bg-raised active:translate-y-px min-[820px]:grid-cols-[auto_auto] min-[820px]:grid-rows-[auto_minmax(0,1fr)] min-[820px]:items-start min-[820px]:justify-between min-[820px]:gap-4 min-[820px]:p-5" id="nav-basics" href="#basics">
+          <span class="grid h-[46px] w-[46px] place-items-center rounded-[14px] bg-accent-soft text-accent min-[820px]:[grid-area:1/1] [&_svg]:h-[23px] [&_svg]:w-[23px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:[stroke-width:1.7] [&_svg]:[stroke-linecap:round] [&_svg]:[stroke-linejoin:round]" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M4 8h10M18 8h2M4 16h4M12 16h8"/><circle cx="16" cy="8" r="2.4"/><circle cx="10" cy="16" r="2.4"/></svg></span>
+          <span class="grid min-w-0 gap-1.5 [&>b]:text-base [&>b]:font-semibold [&>b]:tracking-[-.012em] [&>small]:text-[13px]/[1.45] [&>small]:text-pretty [&>small]:text-muted min-[820px]:[grid-area:2/1/3/-1] min-[820px]:content-start"><b>Basic settings</b><small id="nav-basics-note">Pointer speed, scrolling and dragging</small></span>
+          <span class="text-[22px] leading-none text-faint transition-[color,transform] duration-[180ms] group-hover:translate-x-0.5 group-hover:text-accent min-[820px]:[grid-area:1/2] min-[820px]:justify-self-end" aria-hidden="true">›</span>
+        </a>
+        <a class="group grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 rounded-[18px] border border-line bg-panel px-[22px] py-5 text-fg no-underline transition-[background-color,border-color,transform] duration-[180ms] hover:border-edge hover:bg-raised active:translate-y-px min-[820px]:grid-cols-[auto_auto] min-[820px]:grid-rows-[auto_minmax(0,1fr)] min-[820px]:items-start min-[820px]:justify-between min-[820px]:gap-4 min-[820px]:p-5" id="nav-gestures" href="#gestures">
+          <span class="grid h-[46px] w-[46px] place-items-center rounded-[14px] bg-accent-soft text-accent min-[820px]:[grid-area:1/1] [&_svg]:h-[23px] [&_svg]:w-[23px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:[stroke-width:1.7] [&_svg]:[stroke-linecap:round] [&_svg]:[stroke-linejoin:round]" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="4"/><circle cx="9" cy="10.5" r="1.7"/><circle cx="14.5" cy="13.5" r="1.7"/></svg></span>
+          <span class="grid min-w-0 gap-1.5 [&>b]:text-base [&>b]:font-semibold [&>b]:tracking-[-.012em] [&>small]:text-[13px]/[1.45] [&>small]:text-pretty [&>small]:text-muted min-[820px]:[grid-area:2/1/3/-1] min-[820px]:content-start"><b>Gestures</b><small id="nav-gestures-note">What each tap and swipe does</small></span>
+          <span class="text-[22px] leading-none text-faint transition-[color,transform] duration-[180ms] group-hover:translate-x-0.5 group-hover:text-accent min-[820px]:[grid-area:1/2] min-[820px]:justify-self-end" aria-hidden="true">›</span>
+        </a>
+        <a class="group grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 rounded-[18px] border border-line bg-panel px-[22px] py-5 text-fg no-underline transition-[background-color,border-color,transform] duration-[180ms] hover:border-edge hover:bg-raised active:translate-y-px min-[820px]:grid-cols-[auto_auto] min-[820px]:grid-rows-[auto_minmax(0,1fr)] min-[820px]:items-start min-[820px]:justify-between min-[820px]:gap-4 min-[820px]:p-5" id="nav-advanced" href="#advanced">
+          <span class="grid h-[46px] w-[46px] place-items-center rounded-[14px] bg-accent-soft text-accent min-[820px]:[grid-area:1/1] [&_svg]:h-[23px] [&_svg]:w-[23px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:[stroke-width:1.7] [&_svg]:[stroke-linecap:round] [&_svg]:[stroke-linejoin:round]" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3.5v3M12 17.5v3M20.5 12h-3M6.5 12h-3M18 6l-2.1 2.1M8.1 15.9 6 18M18 18l-2.1-2.1M8.1 8.1 6 6"/><circle cx="12" cy="12" r="3.2"/></svg></span>
+          <span class="grid min-w-0 gap-1.5 [&>b]:text-base [&>b]:font-semibold [&>b]:tracking-[-.012em] [&>small]:text-[13px]/[1.45] [&>small]:text-pretty [&>small]:text-muted min-[820px]:[grid-area:2/1/3/-1] min-[820px]:content-start"><b>Advanced settings</b><small id="nav-advanced-note">Timings, thresholds and everything else</small></span>
+          <span class="text-[22px] leading-none text-faint transition-[color,transform] duration-[180ms] group-hover:translate-x-0.5 group-hover:text-accent min-[820px]:[grid-area:1/2] min-[820px]:justify-self-end" aria-hidden="true">›</span>
+        </a>
+      </nav>
+    </section>
+
+    <!-- BASICS: the settings someone came here to change, and the one switch
+         that decides whether they can. The switch is first because "why is this
+         greyed out?" has to be answered before it is asked. -->
+    <section id="panel-basics" class="page mx-auto grid w-full min-w-0 max-w-[var(--page-width)] gap-[14px] focus:outline-none [.offline_&]:opacity-[.72] [body[data-direction=in]_&]:animate-page-in [body[data-direction=out]_&]:animate-page-out" aria-label="Basic settings" tabindex="-1" hidden>
+      <section class="panel grid gap-4 max-[540px]:rounded-2xl max-[540px]:p-[18px] group gap-1" id="follow-panel">
+        <label class="row cursor-pointer" for="follow">
+          <span>Match my computer<em id="follow-note">Copies your computer’s own trackpad preferences.</em></span>
+          <input id="follow" type="checkbox" role="switch" />
+        </label>
+        <details id="mirror-details" class="group">
+          <summary class="flex min-h-11 cursor-pointer list-none items-center gap-2 text-sm text-accent [&::-webkit-details-marker]:hidden before:h-[7px] before:w-[7px] before:rotate-45 before:border-r-[1.5px] before:border-t-[1.5px] before:border-current before:transition-transform before:duration-150 before:content-[''] group-open:before:rotate-[135deg]">What it copies <span id="mirror-count" class="text-xs tabular-nums text-muted"></span></summary>
+          <!-- The mirror table: what the computer says, and what PadRemote does
+               with it. On a narrow screen the value stops being one unbreakable
+               token, because a preference name is longer than the column. -->
+          <table id="mirror" class="w-full border-collapse text-[13px]
+                                    [&_td]:border-t [&_td]:border-line [&_td]:pb-[9px] [&_td]:pr-2.5 [&_td]:pt-[9px]
+                                    [&_td]:align-top [&_td]:text-muted
+                                    [&_tr:first-child_td]:border-t-0
+                                    [&_.val]:whitespace-nowrap [&_.val]:text-fg
+                                    [&_.why]:mt-1.5 [&_.why]:text-xs [&_.why]:text-faint
+                                    max-[540px]:[&_td]:[overflow-wrap:anywhere] max-[540px]:[&_.val]:whitespace-normal"><tbody id="mirror-rows"></tbody></table>
+        </details>
+      </section>
+      <!-- The rows the desktop sent, in the groups it sent them in. The rules
+           below dress children this page never writes the markup of. -->
+      <div id="basics-groups" class="grid min-w-0 gap-[14px]
+                                     [&>.panel]:gap-5
+                                     [&_.panel>.row+.row]:border-t [&_.panel>.row+.row]:border-line [&_.panel>.row+.row]:pt-5
+                                     [&_.row-slider+.row-slider]:border-t [&_.row-slider+.row-slider]:border-line [&_.row-slider+.row-slider]:pt-5
+                                     [&_.row-slider+.row]:border-t [&_.row-slider+.row]:border-line [&_.row-slider+.row]:pt-5"></div>
+    </section>
+
+    <!-- GESTURES: three columns, and one gesture at a time. The gestures on the
+         left, the actions on the right, and between them nothing but the
+         gesture being demonstrated and what it is currently set to.
+         Source order is the phone's order - pick, watch, choose - which is the
+         same order left to right, so the columns are placed and not reordered. -->
+    <section id="panel-gestures" class="page mx-auto grid w-full min-w-0 max-w-[var(--page-width)] gap-[14px] focus:outline-none [.offline_&]:opacity-[.72] [body[data-direction=in]_&]:animate-page-in [body[data-direction=out]_&]:animate-page-out paned:flex paned:min-h-0 paned:flex-1 paned:flex-col" aria-label="Gestures" tabindex="-1" hidden>
+      <!-- The side column gives way before the middle does. Fixed at 290px it
+           took the same room out of a 620px window as out of a 1240px one,
+           which left the demonstration 284px at the bottom of the range. The
+           floor is measured: below about 248px the "Use existing setting"
+           choice wraps its title as well as carrying its second line. -->
+      <div class="grid gap-[14px]
+                  min-[620px]:grid-cols-[clamp(256px,22vw,300px)_minmax(0,1fr)] min-[620px]:items-start
+                  paned:min-h-0 paned:flex-1 paned:items-stretch
+                  paned:grid-cols-[clamp(256px,22vw,300px)_minmax(0,1fr)]
+                  paned:grid-rows-[auto_minmax(0,1fr)]
+                  roomy:grid-cols-[clamp(256px,22vw,300px)_minmax(0,1fr)_clamp(256px,22vw,300px)]
+                  roomy:grid-rows-[minmax(0,1fr)]">
+        <!-- The list is the full height of the scene in both column counts, so
+             on two columns it spans the row the actions are in as well. -->
+        <div class="min-[620px]:[grid-area:1/1] paned:grid paned:min-h-0 paned:grid-rows-[minmax(0,1fr)]
+                    paned:[grid-area:1/1/3/2] roomy:[grid-area:1/1]">
+          <label class="sr-only" for="gesture-select">Gesture</label>
+          <select id="gesture-select" class="w-full min-[620px]:hidden"></select>
+          <!-- The list is the navigation on a wide screen; a narrow one gets
+               the picker above. Nothing scrolls inside itself until the screen
+               layout at the bottom of the window, which says so where it is. -->
+          <!-- The rows are built by `config.ts`, so the list dresses them: a
+               picture, then the name, then what it is currently set to. The
+               `small` is clamped to two lines because one long sentence made
+               its row four times the height of its neighbours, and rows that
+               are all different heights are rows that cannot be scanned. -->
+          <ul id="gesture-list"
+              class="hidden min-[620px]:grid min-[620px]:list-none min-[620px]:content-start min-[620px]:gap-0.5
+                     paned:max-h-full paned:overflow-y-auto paned:pr-1
+                     [&_button]:flex [&_button]:w-full [&_button]:min-h-11 [&_button]:cursor-pointer
+                     [&_button]:items-center [&_button]:justify-start [&_button]:gap-2.5
+                     [&_button]:rounded-xl [&_button]:border [&_button]:border-transparent [&_button]:bg-transparent
+                     [&_button]:px-2.5 [&_button]:py-2 [&_button]:text-left [&_button]:text-sm [&_button]:text-muted
+                     [&_button[aria-selected=true]]:bg-accent-soft [&_button[aria-selected=true]]:text-fg
+                     [&_b]:block [&_b]:font-[550]
+                     [&_small]:mt-[5px] [&_small]:line-clamp-2 [&_small]:text-xs [&_small]:text-faint
+                     [&>.gesture-section]:mb-1 [&>.gesture-section]:mt-[14px] [&>.gesture-section]:px-3
+                     [&>.gesture-section]:text-[11px] [&>.gesture-section]:font-semibold [&>.gesture-section]:uppercase
+                     [&>.gesture-section]:tracking-[.08em] [&>.gesture-section]:text-faint
+                     [&>.gesture-section:first-child]:mt-0"
+              role="tablist" aria-orientation="vertical" aria-label="Gestures"></ul>
+        </div>
+        <!-- Stuck to the top while the list runs past it: without this the
+             drawing you are consulting scrolls off the screen while you are
+             still looking for the row you want. Sticky is bounded by its own
+             grid row, so it lets go when the actions below it arrive. -->
+        <section class="panel grid gap-4 max-[540px]:rounded-2xl max-[540px]:p-[18px] gap-[14px] scroll-mt-[var(--chrome-top)]
+                        min-[620px]:sticky min-[620px]:top-[calc(var(--chrome-top)+8px)] min-[620px]:self-start min-[620px]:[grid-area:1/2]
+                        paned:text-center paned:[grid-area:1/2]
+                        roomy:min-h-0 roomy:content-center roomy:self-stretch roomy:overflow-y-auto roomy:[grid-area:1/2]"
+                 id="gesture-detail" role="tabpanel" tabindex="-1">
+            <!-- The demonstration. Filled in by the page, because the drawing is
+                 built from the same gesture definition the list is. -->
+            <figure id="gesture-demo" class="mb-1 flex justify-center"></figure>
+            <!-- Centred under the drawing they describe on a wide screen, but
+                 measured: a sentence centred past a certain width is a shape
+                 rather than a line. -->
+            <div class="grid min-w-0 gap-3 [&>p]:text-muted paned:justify-items-center paned:[&>*]:max-w-[46ch]">
+              <h3 id="gesture-name" class="text-lg font-semibold leading-[1.35] tracking-[-.015em] max-[619px]:text-lg">Gesture</h3>
+              <p id="gesture-assignment" aria-live="polite"></p>
+              <p id="gesture-fixed" class="text-[13px] text-dim" hidden></p>
+              <!-- Locked or merely seeded, this is information rather than a
+                   warning: the control says for itself whether it can move. -->
+              <p id="gesture-locked" class="text-[13px] text-dim text-muted" hidden></p>
+            </div>
+        </section>
+        <!-- A section with a heading, not a fieldset with a legend. A legend is
+             drawn *into* the top border of its fieldset, and on a panel with a
+             radius and a background that put the words above the box they name.
+             Making the fieldset a flex column moves the legend back in-flow in
+             Chrome, and floating it does the same by taking it out of the
+             "rendered legend" case - but iOS Safari honours neither, so on the
+             phone the heading still sat outside its own panel with the border
+             notched around it. The radio group inside carries its own name, so
+             the fieldset was buying nothing that this does not.
+
+             A column rather than a grid, so the list of choices can take
+             whatever height is left once the heading and the search box have
+             theirs - and so a hidden "no matches" line simply is not there
+             rather than shifting a row. -->
+        <section id="gesture-actions"
+                 class="panel flex min-w-0 flex-col gap-0 max-[540px]:rounded-2xl max-[540px]:p-[18px]
+                        min-[620px]:[grid-area:2/1/3/-1] paned:min-h-0 paned:[grid-area:2/2] roomy:[grid-area:1/3]"
+                 aria-labelledby="assign-title">
+          <p id="assign-title" class="pb-[14px] text-xs font-semibold uppercase tracking-[.06em] text-muted">Assign an action</p>
+          <label class="sr-only" for="action-search">Search actions</label>
+          <!-- The search field sits directly above the list of actions, which
+               are rows of the same width - so left to the shared input styling
+               it read as one more row rather than the thing that filters them.
+               The magnifier says what it is at a glance, and the ring is drawn
+               tight to the border instead of the page-wide 3px-at-4px-offset,
+               which on a field this close to the list below swallowed the first
+               choice. -->
+          <div class="relative mb-4 group/search">
+            <svg class="pointer-events-none absolute left-[14px] top-1/2 h-[18px] w-[18px] -translate-y-1/2 fill-none
+                        stroke-faint [stroke-width:1.8] [stroke-linecap:round] transition-[stroke] duration-[180ms]
+                        group-focus-within/search:stroke-accent"
+                 viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+              <circle cx="8.75" cy="8.75" r="5.25" />
+              <path d="M12.6 12.6 17 17" />
+            </svg>
+            <input id="action-search" type="search" placeholder="Search actions…" autocomplete="off"
+                   class="w-full bg-bg pl-[42px] pr-[42px] transition-[border-color,box-shadow] duration-[180ms]
+                          placeholder:text-faint
+                          focus:border-accent focus:outline-none focus:shadow-[0_0_0_3px_rgb(147_167_255/.28)]" />
+            <!-- Native search fields hide their cancel button (see theme.css),
+                 because on a phone it is a 12px target; this is the same
+                 affordance at a size a thumb can actually hit. -->
+            <button id="action-search-clear" type="button" aria-label="Clear search" hidden
+                    class="btn absolute right-1.5 top-1/2 h-8 w-8 min-h-0 -translate-y-1/2 rounded-lg bg-transparent p-0 text-muted
+                           hover:border-transparent hover:bg-raised hover:text-fg
+                           [&_svg]:h-4 [&_svg]:w-4 [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:[stroke-width:1.8] [&_svg]:[stroke-linecap:round]">
+              <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M6.5 6.5 13.5 13.5M13.5 6.5 6.5 13.5" /></svg>
+            </button>
+          </div>
+          <p id="action-empty" class="text-[13px] text-dim" hidden>No matching actions. Try another search.</p>
+          <!-- Seven pixels rather than five. These are 44px rows with a border
+               of their own, and at five the gap read as a rendering seam rather
+               than as space between two things you are choosing between.
+
+               `min-content` rows because one choice has a second line under it
+               and a `<button>` reports the height of one line whatever is
+               inside it. Left to size its rows from that, the grid gave that
+               choice a 44px row, the button drew 64px of itself into it, and
+               the overflow sat on the choice underneath.
+
+               Ten pixels of gutter where the column scrolls: a scrolling list
+               on this platform draws its bar *over* what is underneath, and
+               four put it over the right-hand border of every button.
+
+               As many columns as fit rather than a column count per breakpoint,
+               because this box is four different widths on the way up: the
+               phone's screen, a tablet's right-hand pane, the whole page where
+               the actions sit under both columns, and the 200-odd pixels of the
+               third column. Left at one column it drew "Copy" at the left end of
+               a 740px bar with the rest of the row empty, and ran forty of those
+               down the page. 180px is the floor: "Use existing setting" is the
+               longest title and measures 132px, and the button spends 32px of
+               its own on padding. Only above 620px, because the phone's column
+               is the one width where a single column is the right answer - two
+               of these side by side at 370px is a keypad, not a list. The group
+               headings span, or the first choice of a group sits up beside the
+               words naming the one above it. -->
+          <div id="action-choices" role="radiogroup" aria-labelledby="gesture-name"
+               class="grid auto-rows-min gap-[7px]
+                      min-[620px]:grid-cols-[repeat(auto-fill,minmax(180px,1fr))]
+                      paned:min-h-0 paned:flex-1 paned:overflow-y-auto paned:pr-2.5 paned:[scrollbar-gutter:stable]"></div>
+        </section>
+      </div>
+    </section>
+
+    <!-- ADVANCED: the timings and thresholds, plus anything the desktop sends
+         that this page has no opinion about - so a setting added to the config
+         can never be missing here, only unexplained. -->
+    <section id="panel-advanced" class="page mx-auto grid w-full min-w-0 max-w-[var(--page-width)] gap-[14px] focus:outline-none [.offline_&]:opacity-[.72] [body[data-direction=in]_&]:animate-page-in [body[data-direction=out]_&]:animate-page-out" aria-label="Advanced settings" tabindex="-1" hidden>
+      <div id="advanced-groups" class="grid min-w-0 gap-[14px]"></div>
+      <section class="panel grid gap-4 max-[540px]:rounded-2xl max-[540px]:p-[18px]">
+        <h2 class="text-lg font-semibold leading-[1.35] tracking-[-.015em]">Restore defaults <small class="mt-[7px] block text-[13px] font-normal leading-[1.5] tracking-normal text-muted">Settings saved on a phone are separate, and stay.</small></h2>
+        <button id="defaults" class="btn justify-self-start" type="button">Restore defaults…</button>
+        <p id="confirm" class="flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-bad bg-raised p-[14px] text-sm" hidden>
+          <span>Restore every setting on <b id="confirm-name">this computer</b>?</span>
+          <span class="flex gap-2">
+            <button id="confirm-no" class="btn btn-bare" type="button">Cancel</button>
+            <button id="confirm-yes" class="btn btn-primary" type="button">Restore defaults</button>
+          </span>
+        </p>
+      </section>
+      <footer class="grid gap-1.5 px-0.5 py-1">
+        <span class="text-[13px] text-dim">Saved to your computer as you go.</span>
+        <span id="path" class="break-all text-xs tabular-nums text-faint"></span>
+      </footer>
+    </section>
+  </main>
+
+  <script type="module" src="/src/config.ts"></script>
+</body>
+</html>

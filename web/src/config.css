@@ -1,0 +1,475 @@
+/*
+ * The settings page. Everything about its layout, spacing and colour is a
+ * utility class in `config.html` and in the `config.ts` that generates the rest
+ * of it. What is left is one thing: the gesture drawings.
+ *
+ * They stay CSS because they are not styling. They are an animation engine
+ * written in SVG presentation attributes - `offset-path`, `stroke-dashoffset`,
+ * `transform-box`, dash arrays measured in `pathLength` units - none of which
+ * Tailwind has a utility for, and none of which would be clearer as one if it
+ * did: twenty of these run at once, phase-shifted, on shapes the page never
+ * writes the markup of. `gesturepad.ts` builds them from a gesture definition
+ * and hands each one a `--phase`, a `--motion` and a pair of coordinates; these
+ * rules are what those variables mean.
+ *
+ * The one thing here that is not the engine is the two colours it is lit in,
+ * which come from the theme by name. Like `style.css`, this is plain CSS
+ * appended after `theme.css` rather than a Tailwind entry point of its own.
+ */
+
+/* ------------------------------------------------- the gesture drawings
+
+   One drawing, two sizes. The thumbnail in the list is the same markup as the
+   demonstration beside it, so a gesture cannot be pictured one way in the list
+   and another in the panel - which is exactly what "which one is that?" needs.
+
+   Everything moves through `transform`, `offset-distance` and dash offsets on
+   shapes that are already in place, so nothing here reflows the row it sits
+   in. */
+
+.gesture-pad {
+  display: block;
+  overflow: visible;
+  /* One hue for the whole drawing, so lighting a picture is one declaration
+     rather than one per shape - and so the gradients, which can only name a
+     colour through `currentColor`, are lit by the same switch as the rest.
+     Kept in a variable as well as on `color`, because the press animation has
+     to name the colour it is turning *away from* in a keyframe. */
+  --lit: var(--color-muted);
+  color: var(--lit);
+  /* The green the app itself turns when a drag arms. Taken from the phone
+     rather than from this page's palette, because the whole point of the press
+     demonstration is that it looks like the thing it is describing. */
+  --armed: #3fb950;
+  /* Travel accelerates away and settles, and every shape that has to stay
+     glued to a fingertip - the blur it drags behind it above all - eases on
+     exactly this curve. Named once so they cannot drift apart. */
+  --ease: cubic-bezier(.42, 0, .18, 1);
+}
+.gesture-pad .pad-frame {
+  fill: var(--color-bg);
+  stroke: var(--color-line);
+  stroke-width: 2;
+}
+/* A fingertip is the dot and the soft patch it presses through. One flat disc
+   is a bullet hole; the patch under it is what makes it a finger. */
+.gesture-pad .finger { fill: currentColor; }
+.gesture-pad .pad-halo { fill: currentColor; opacity: .16; }
+/* The motion blur: a wide faint capsule for the spill and a narrower one at the
+   fingertip's own width for the core, both reaching back the way the hand came
+   and both fading to nothing along their own length. Together they are what a
+   shutter records of something moving, and they are what tells a still drawing
+   which way its gesture goes now that there is no arrow to say so. */
+.gesture-pad :is(.pad-blur, .pad-blur-core) {
+  fill: none;
+  stroke-linecap: round;
+  /* `pathLength` is 1 on the shape, so one unit is the whole reach: an offset
+     of 1 is no blur and 0 is all of it, whatever the capsule measures. */
+  stroke-dasharray: 1 1;
+  /* At rest the blur sits at its full designed length behind the fingers. A
+     still picture of a swipe is a picture of a swipe that has just happened,
+     and what it left behind is the only thing saying which way it went. */
+  stroke-dashoffset: var(--smear, .25);
+}
+.gesture-pad .pad-ripple,
+.gesture-pad .pad-ring,
+.gesture-pad .pad-ring-track,
+.gesture-pad .pad-burst {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  /* Scale about the fingertip they surround, not about the pad's corner. */
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.gesture-pad .pad-ring {
+  stroke-width: 2.6;
+  /* A shade longer than the path, so the finished ring closes over its own
+     start rather than showing the seam between two butt caps. */
+  stroke-dasharray: 1.03 1;
+  stroke-linecap: butt;
+  /* Twelve o'clock, where a clock face starts filling and where the phone's
+     own ring starts filling. */
+  transform: rotate(-90deg);
+}
+.gesture-pad .pad-ring-track { opacity: .2; }
+/* The head belongs to the charge. On a ring that is already closed there is
+   nothing being charged, so it has no business being there - which is the state
+   a browser told not to animate is left in. */
+.gesture-pad .pad-head {
+  fill: currentColor;
+  /* Lighter than the arc it rides, because it is the part the eye actually
+     tracks and an arc's own colour makes it just the end of the arc. The phone
+     picks a lighter blue for the same reason; mixing towards white gets it from
+     whatever colour the drawing happens to be lit in. */
+  fill: color-mix(in srgb, currentColor 45%, white);
+}
+/* Hidden on the group rather than on the dot inside it, because the group is
+   what the charge animates: an `opacity: 0` on the dot survives the animation
+   and multiplies the group's fade down to nothing. */
+.gesture-pad .pad-ring-head { opacity: 0; }
+/* Green at rest, because at rest this ring is a *finished* press: the button is
+   down and the finger has already dragged. The animation starts it in the
+   drawing's own colour and turns it, which is the part that only makes sense
+   while something is actually happening. */
+.gesture-pad .pad-press { color: var(--armed); }
+/* Both of these turn about the fingertip - the ring gathers in on it, the head
+   runs around it - and a group has no shape of its own to turn about. Left
+   alone a group takes the middle of the *pad*, so the gathering ring closed in
+   on a point eight units to the left of the finger it belonged to, and the head
+   was flung around the pad instead of around its ring.
+   `0 0` is the fingertip, because everything in a finger's group is drawn about
+   the origin and the group is what was moved into place. */
+.gesture-pad .pad-press,
+.gesture-pad .pad-ring-head,
+.gesture-pad .pad-touch {
+  transform-box: view-box;
+  transform-origin: 0 0;
+}
+/* The shockwave off the completed press. Green from the start: it exists only
+   at the instant the drag arms, and that instant is already green. */
+.gesture-pad .pad-burst { stroke: var(--armed); stroke-width: 2.6; opacity: 0; }
+
+/* Every fingertip is drawn about the origin and put in place by `--x`/`--y`, so
+   a `scale` in a keyframe is a scale about the fingertip without any of them
+   needing a box measured for it, and a fingertip can be handed to `offset-path`
+   instead - which places an element by its origin and nothing else.
+
+   `transform-box: view-box` so the path is read in the drawing's own units, and
+   `transform-origin: 0 0` so the point it places is the fingertip rather than
+   the middle of the pad. `offset-distance` rests at the end of the journey: a
+   still drawing should show the cursor arrived, with its trail behind it. */
+.gesture-pad .pad-finger {
+  transform: translate(calc(var(--x, 0) * 1px), calc(var(--y, 0) * 1px));
+  /* The fingertip is the pivot for everything that happens to it. Left alone a
+     group takes the middle of the *pad*, and every `scale` in a keyframe then
+     moves the finger sideways as well as sizing it - a two-finger tap dipped by
+     sliding its fingers towards each other, which is not what a tap does.
+     `0 0` is the fingertip, because everything inside is drawn about the origin
+     and the translate above is what puts the group in place. */
+  transform-box: view-box;
+  transform-origin: 0 0;
+}
+/* The two one-finger gestures are flown along a path instead of being placed by
+   `--x`/`--y`: `offset-path` positions an element by its own origin, and every
+   fingertip here is drawn about its origin, so the path can simply be handed
+   over. `--path` is the curve `sweepPath` built for this drawing.
+
+   `offset-rotate: auto` turns the fingertip to face along that curve. Nothing in
+   it is asymmetric enough to see turning - it is circles - but the motion blur
+   is drawn straight back along the local x axis, and turning the frame is what
+   keeps that blur behind the finger the whole way round a bend. The curve leaves
+   flat and to the right, so at the start of the journey the turn is nothing at
+   all, and a press ring charging there still starts at twelve.
+
+   At rest they sit at the *end* of the journey, with the blur of it behind: a
+   still picture of a gesture should be a picture of one that has
+   just happened, not of one waiting to. */
+.gesture-pad:is([data-motion="move"], [data-motion="hold"]) .pad-finger {
+  transform: none;
+  offset-path: var(--path);
+  offset-rotate: auto;
+  offset-distance: 100%;
+}
+
+/* The thumbnail. Sized in `em` so it tracks the row's text rather than being
+   pinned to a pixel count that stops matching when the page is zoomed. */
+.gesture-thumb { width: 3em; flex: 0 0 auto; }
+
+/* The selected row is the one being demonstrated, so its picture is lit the
+   same way its words are. */
+.gesture-list button[aria-selected="true"] .gesture-pad { --lit: var(--color-accent); }
+
+.gesture-demo {
+  display: flex;
+  justify-content: center;
+  margin: 0 0 4px;
+}
+.gesture-pad.is-animated {
+  /* Scaled to the room it has rather than stepped at a breakpoint. It used to be
+     210px until 1020, then 380 - so a 1000px window showed the same stamp a
+     700px one did, and the middle column of a wide layout had a drawing in it
+     the size of a thumbnail. The ceiling is where the column stops being able
+     to hold it and the floor is where it stops being a picture of anything. */
+  width: min(100%, clamp(190px, 26vw, 380px));
+  --lit: var(--color-accent);
+}
+
+/* --------------------------------------------------------- the animation
+
+   Every drawing moves, thumbnails included: a gesture is a thing that happens,
+   and a still picture of one is a picture of the moment after it. What keeps a
+   list of twenty from becoming a strobe is not stillness but phase - each pad
+   starts somewhere else in the shared three-second loop (`--phase`, hashed
+   from the gesture's id), so the page moves the way a room does rather than
+   the way a warning light does.
+
+   Nothing is staggered. A hand is one object, and the fingers of a real
+   three-finger swipe land, travel and leave together; setting them off a beat
+   apart drew three hands that happened to be near each other. The row is bowed
+   instead, which is a spatial offset and the thing that was actually true.
+
+   Anything that travels gets *two* animations: one for where it is, one for
+   whether it can be seen. Kept apart because they want different easing -
+   travel accelerates and settles, while a fade should be even at both ends -
+   and because a single keyframe list that does both ends up with the opacity
+   steps landing on the movement's beats, which is what makes an animation look
+   stepped rather than smooth.
+
+   The fade is there to hide a jump. A gesture that crosses the pad has to be
+   put back where it started, so it leaves first: the cycle ends faded out with
+   the transform still at the far end, and the snap happens on an empty pad. A
+   tap crosses nothing, has nothing to put back, and so never leaves at all. */
+@media (prefers-reduced-motion: no-preference) {
+  .gesture-pad :is(.pad-finger, .pad-touch, .pad-ripple, .pad-ring, .pad-ring-track,
+                   .pad-ring-head, .pad-burst, .pad-press,
+                   .pad-blur, .pad-blur-core) {
+    animation-duration: 3s;
+    animation-iteration-count: infinite;
+    /* A negative delay starts the loop already under way, which is the whole
+       point of the phase. */
+    animation-delay: calc(var(--phase, 0s) * -1);
+  }
+
+  /* Position on the outer group, size and presence on the inner one. */
+  .gesture-pad .pad-finger {
+    animation-name: pad-travel;
+    animation-timing-function: var(--ease);
+  }
+  .gesture-pad .pad-touch {
+    animation-name: pad-touch;
+    animation-timing-function: ease-in-out;
+  }
+  .gesture-pad .pad-ripple {
+    animation-name: pad-ripple;
+    animation-timing-function: cubic-bezier(.2, .65, .3, 1);
+  }
+  /* The blur is a function of speed, so it is on the same clock and the same
+     curve as the travel it belongs to: it grows out of the finger as the hand
+     accelerates, is longest where `--ease` is steepest, and is gone by the time
+     the hand has settled. Anything else and the smear is a shape being towed
+     along rather than the record of a movement. */
+  .gesture-pad :is(.pad-blur, .pad-blur-core) {
+    animation-name: pad-smear;
+    animation-timing-function: var(--ease);
+  }
+
+  /* Where the fingers go. The distance is in the drawing's own units, which
+     scale with the viewBox, so a reach means the same fraction of the pad at
+     either size. Halved both ways in the keyframes, so the hand crosses the
+     middle of the pad rather than starting in it and ending against an edge.
+
+     Identical at both sizes. The thumbnail used to travel less than half as
+     far, which made it a drawing of a smaller gesture rather than a smaller
+     drawing of the same one - so the row and the panel disagreed about what a
+     swipe looks like, which is the one thing a thumbnail must not do. */
+  .gesture-pad { --reach: 22px; --lift: 20px; }
+  /* How much of the reach the blur uses at its longest, measured back from the
+     fingertip. A hold uses nearly all of it: the first fourteen units of that
+     blur are underneath its own press ring, so the fraction a swipe can afford
+     to leave undrawn is the entire visible part of this one. */
+  .gesture-pad { --smear: .25; }
+  .gesture-pad[data-motion="hold"] { --smear: .05; }
+  .gesture-pad[data-direction="left"] { --travel-x: calc(var(--reach) * -1); --travel-y: 0px; }
+  .gesture-pad[data-direction="right"] { --travel-x: var(--reach); --travel-y: 0px; }
+  .gesture-pad[data-direction="up"] { --travel-x: 0px; --travel-y: calc(var(--lift) * -1); }
+  .gesture-pad[data-direction="down"] { --travel-x: 0px; --travel-y: var(--lift); }
+
+  /* A tap goes nowhere: the contact under the fingertip is the whole gesture.
+     Nothing has to be put back at the start either, so the fingers have no
+     reason to leave - they rest on the pad and give, every three seconds, which
+     is what a finger tapping actually looks like. */
+  .gesture-pad[data-motion="tap"] .pad-touch {
+    animation-name: pad-dab;
+    animation-timing-function: cubic-bezier(.3, 0, .2, 1);
+  }
+  .gesture-pad[data-motion="tap"] .pad-finger { animation-name: none; }
+  /* The cursor: one easy curve across the pad, and slow enough to be a hand. */
+  .gesture-pad[data-motion="move"] .pad-finger {
+    animation-name: pad-glide;
+    animation-timing-function: ease-in-out;
+  }
+
+  /* ------------------------------------------------------ press and hold
+
+     The phone's own sequence, at the phone's own beats: the ring arrives wide
+     and gathers in while it charges, a bright head runs the charging edge, the
+     finished press bursts and turns green, and the green ring then travels with
+     the finger for as long as the button is held down.
+
+     The charge is linear because it is a timer running, not a movement easing -
+     and because the head has to sit exactly on the end of the arc, which it
+     can only do if both are read off the same clock the same way.
+
+     It is over by a third of the loop rather than halfway through it, because
+     what follows has to be unhurried: a drag squeezed into the last few beats
+     is a flick, and a flick is not what this gesture feels like to do. */
+  .gesture-pad[data-motion="hold"] .pad-finger {
+    animation-name: pad-press;
+    /* Even, from end to end. The travel curve is for a hand that sets off,
+       crosses and settles; this hand is already moving something and keeps
+       going at the pace it started. */
+    animation-timing-function: ease-in-out;
+  }
+  .gesture-pad .pad-press {
+    animation-name: pad-gather, pad-arm;
+    animation-timing-function: var(--ease), linear;
+  }
+  .gesture-pad .pad-ring {
+    animation-name: pad-charge;
+    animation-timing-function: linear;
+  }
+  .gesture-pad .pad-ring-head {
+    animation-name: pad-charge-head;
+    animation-timing-function: linear;
+  }
+  .gesture-pad .pad-ring-track { animation-name: pad-track; }
+  .gesture-pad .pad-burst { animation-name: pad-burst; animation-timing-function: cubic-bezier(.1, .7, .3, 1); }
+  .gesture-pad[data-motion="move"] :is(.pad-blur, .pad-blur-core) {
+    animation-name: pad-smear-glide;
+  }
+  /* The press half of a hold is a finger sitting still, and a still finger does
+     not blur. So the smear waits for the drag and runs on its beats. */
+  .gesture-pad[data-motion="hold"] :is(.pad-blur, .pad-blur-core) {
+    animation-name: pad-smear-drag;
+  }
+}
+
+/* Land, cross, settle - with the long tail of the easing doing the settling
+   rather than a keyframe parked at the end. */
+@keyframes pad-travel {
+  0%, 16% {
+    transform: translate(
+      calc(var(--x, 0) * 1px - var(--travel-x, 0px) / 2),
+      calc(var(--y, 0) * 1px - var(--travel-y, 0px) / 2));
+  }
+  72%, 100% {
+    transform: translate(
+      calc(var(--x, 0) * 1px + var(--travel-x, 0px) / 2),
+      calc(var(--y, 0) * 1px + var(--travel-y, 0px) / 2));
+  }
+}
+/* A finger arriving and leaving, rather than a finger blinking.
+ *
+ * The gesture has to reset somewhere, and the reset is a jump - so something
+ * has to cover it. Fading alone made the fingers switch off and on again, which
+ * is the one thing a finger cannot do. Landing slightly large and settling, and
+ * lifting slightly small, reads as touch-down and lift-off; the pad is then
+ * empty for exactly as long as it takes to put the hand back. */
+@keyframes pad-touch {
+  0% { opacity: 0; scale: 1.25; }
+  6%, 84% { opacity: 1; scale: 1; }
+  94%, 100% { opacity: 0; scale: .7; }
+}
+/* The tap itself: the fingertip gives, the way a finger does against glass. */
+@keyframes pad-dab {
+  0%, 22% { scale: 1; }
+  30% { scale: .82; }
+  46%, 100% { scale: 1; }
+}
+/* `pad-touch` and `pad-dab` both live on `.pad-touch`, whose own origin is the
+   fingertip and which carries no position of its own - so `scale` sizes the
+   fingertip in place. On the same group as the translate it would not: CSS
+   applies the individual `scale` property *outside* the `transform` property,
+   and it would scale the position too. */
+/* The contact leaving the fingertip. It starts inside the dot and outruns it,
+   thinning as it goes - which is what makes a tap read as a tap rather than as
+   a dot with a ring. */
+@keyframes pad-ripple {
+  0%, 24% { opacity: 0; transform: scale(.5); stroke-width: 2.8; }
+  34% { opacity: .65; }
+  78%, 100% { opacity: 0; transform: scale(1.2); stroke-width: .8; }
+}
+
+/* The blur, growing and dying with the speed of the hand. Its beats are the
+   travel's beats: nothing at 16% where the hand sets off, longest at 34% where
+   `--ease` is steepest, nothing again by 72% where the hand has arrived. The
+   opacity rides along rather than being animated apart, because unlike a shape
+   arriving on the pad this one *is* the movement - there is no moment where it
+   should be visible and not moving. */
+@keyframes pad-smear {
+  0%, 16% { stroke-dashoffset: 1; opacity: 0; }
+  34% { stroke-dashoffset: var(--smear); opacity: 1; }
+  72%, 100% { stroke-dashoffset: 1; opacity: 0; }
+}
+/* The same, on a journey that does not accelerate and settle but simply runs.
+   The smear grows once the finger is away, holds while it is going round, and is
+   gone by the time it stops - the beats of `pad-glide`, one step inside it at
+   each end so the blur never outlives the movement that made it. */
+@keyframes pad-smear-glide {
+  0%, 10% { stroke-dashoffset: 1; opacity: 0; }
+  22% { stroke-dashoffset: var(--smear); opacity: 1; }
+  66% { stroke-dashoffset: var(--smear); opacity: 1; }
+  78%, 100% { stroke-dashoffset: 1; opacity: 0; }
+}
+/* And on the drag that follows a completed press, on `pad-press`'s beats. */
+@keyframes pad-smear-drag {
+  0%, 36% { stroke-dashoffset: 1; opacity: 0; }
+  47% { stroke-dashoffset: var(--smear); opacity: 1; }
+  78% { stroke-dashoffset: var(--smear); opacity: 1; }
+  88%, 100% { stroke-dashoffset: 1; opacity: 0; }
+}
+
+/* The cursor's journey. It leaves late enough for the finger to have landed and
+   arrives early enough for it to lift, so the whole curve is drawn by a finger
+   that is actually on the pad - and it takes nearly the whole loop to do it,
+   because what a gesture looks like it is moving at is its distance over this
+   window, and these have to sit beside the swipes without racing them. */
+@keyframes pad-glide {
+  0%, 10% { offset-distance: 0%; }
+  78%, 100% { offset-distance: 100%; }
+}
+/* Press and hold: the finger sits still while the ring charges, and only then
+   does it move - which is the whole point of the gesture. The charge is over by
+   36%, which leaves the drag half the loop's worth of time to cover a short
+   curve in - which is what keeps it at the speed of a hand rather than a flick. */
+@keyframes pad-press {
+  0%, 36% { offset-distance: 0%; }
+  88%, 100% { offset-distance: 100%; }
+}
+/* Wide, then closing on the fingertip: the press reads as gathering. */
+@keyframes pad-gather {
+  0%, 6% { opacity: 0; transform: scale(1.45); }
+  12% { opacity: 1; }
+  34%, 100% { opacity: 1; transform: scale(1); }
+}
+/* The moment the drag arms, in colour. The ring does not cut to green; it
+   turns, which is what makes the charge and the confirmation one object. */
+@keyframes pad-arm {
+  0%, 32% { color: var(--lit); }
+  38%, 100% { color: var(--armed); }
+}
+/* The charge, as a timer filling. */
+@keyframes pad-charge {
+  0%, 8% { stroke-dashoffset: 1.03; stroke-width: 2.2; }
+  34% { stroke-dashoffset: 0; stroke-width: 3.4; }
+  /* Back to a line once it is a state rather than a thing filling: the armed
+     ring has to sit beside the fingertip, not swallow it. */
+  44%, 100% { stroke-dashoffset: 0; stroke-width: 2.6; }
+}
+/* The bright head on the charging edge - the part the eye actually tracks. It
+   turns the full circle over exactly the beats the arc is drawn across, so it
+   sits on the end of the arc rather than near it. */
+@keyframes pad-charge-head {
+  0%, 8% { transform: rotate(0deg); opacity: 0; }
+  12% { opacity: 1; }
+  34% { transform: rotate(360deg); opacity: 1; }
+  38%, 100% { transform: rotate(360deg); opacity: 0; }
+}
+/* The track the charge is filling towards, so the sweep reads as progress
+   rather than as a line growing out of nothing. It stays for the drag: the
+   ring being there at all is what says the button is still down. */
+@keyframes pad-track {
+  0%, 6% { opacity: 0; }
+  14%, 84% { opacity: .22; }
+  92%, 100% { opacity: 0; }
+}
+/* The shockwave off the completed press. The stroke is pulled in as the ring
+   goes out, because `scale` scales a stroke too - left alone the wave thickens
+   as it expands, which is the opposite of what a wave does. */
+@keyframes pad-burst {
+  0%, 34% { opacity: 0; transform: scale(1); stroke-width: 2.6; }
+  39% { opacity: .75; }
+  52%, 100% { opacity: 0; transform: scale(2.4); stroke-width: .5; }
+}
+

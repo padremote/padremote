@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0c1018" />
+  <title>PadRemote · Press animation</title>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+</head>
+<body class="bg-[radial-gradient(ellipse_at_50%_15%,#1b2540_0%,var(--color-bg)_70%)]">
+  <!-- The same full-bleed canvas the phone draws on. On the phone it must never
+       steal a touch from the trackpad under it; here there is nothing under it
+       and the canvas *is* the input. -->
+  <canvas id="trail" aria-label="Interactive preview: press and hold to see the drag animation"
+          class="fixed touch-none top-[var(--app-top,0px)] left-[var(--app-left,0px)]
+                 h-[var(--app-h,100dvh)] w-[var(--app-w,100%)]"></canvas>
+
+  <header id="bar"
+          class="pointer-events-none fixed z-[5] flex flex-wrap items-center gap-4 text-sm/[1.5] text-muted
+                 top-[var(--app-top,0px)] left-[var(--app-left,0px)] right-[var(--app-right,0px)]
+                 bg-linear-to-b from-bg to-transparent
+                 pb-[18px] pl-[max(env(safe-area-inset-left),20px)] pr-[max(env(safe-area-inset-right),20px)] pt-[max(env(safe-area-inset-top),18px)]
+                 max-[520px]:gap-2.5">
+    <div class="min-w-40 flex-1 max-[520px]:basis-full">
+      <h1 class="mb-1 text-xl font-semibold text-fg">Press &amp; hold preview</h1>
+      <span id="state" class="block text-[13px] [overflow-wrap:anywhere]" role="status">Press and hold anywhere</span>
+    </div>
+    <nav class="flex flex-wrap items-center gap-2 max-[520px]:w-full" aria-label="Preview controls">
+      <a class="inline-flex min-h-11 items-center rounded-xl px-2.5 py-2 no-underline pointer-events-auto focus-visible:outline-2 focus-visible:outline-offset-2" data-app-link href="/">Trackpad</a>
+      <a class="inline-flex min-h-11 items-center rounded-xl px-2.5 py-2 no-underline pointer-events-auto focus-visible:outline-2 focus-visible:outline-offset-2" data-app-link href="/config.html#gestures">Gestures</a>
+      <button id="play" class="btn btn-primary pointer-events-auto max-[520px]:ml-auto" type="button">Replay</button>
+    </nav>
+  </header>
+  <p id="preview-hint"
+     class="pointer-events-none fixed inset-x-5 z-[5] text-center text-sm/[1.6] text-muted
+            bottom-[calc(var(--app-bottom,0px)+max(env(safe-area-inset-bottom),24px))]">Hold a finger on the screen, then move to see the drag feedback.</p>
+
+  <script type="module" src="/src/preview.ts"></script>
+  <script type="module">
+    const host = new URLSearchParams(location.search).get("h");
+    for (const link of document.querySelectorAll("[data-app-link]")) {
+      if (!host) continue;
+      const target = new URL(link.href);
+      target.searchParams.set("h", host);
+      link.href = target.href;
+    }
+  </script>
+</body>
+</html>
