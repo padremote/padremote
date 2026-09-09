@@ -10,55 +10,49 @@ That is what makes the product tunable without redeploying the page, testable
 without a phone, and portable: a native phone app could replace the web page
 tomorrow without the desktop noticing.
 
-## The pieces
+## The shape
 
-```
-┌─ phone: web page (web/src/) ──────────────────────────┐
-│  surface.ts   pointer capture + gesture suppression   │
-│  net.ts       WebSocket, batched once per frame       │
-│  device.ts    what this phone calls itself            │
-│  viewport.ts  noticing when the page really resized   │
-│  trail.ts     the canvas: finger trails, a diagnostic │
-│  trail/hold   the long-press indicator + drag glow    │
-│  haptics.ts   vibration, where it exists              │
-│  sound.ts     the click every phone can make          │
-│  ui.ts        status, settings sheet, whose turn it is│
-│  config.ts    the settings page, generated from the config│
-│  theme.css    the one visual language - see design.md │
-└───────────────────────┬───────────────────────────────┘
-                        │  http:// to fetch this page, then
-                        │  ws:// over your own Wi-Fi - the
-                        │  same port, one connection per device
-                        ▼
-┌─ desktop: Rust app (desktop/src/) ────────────────────┐
-│  cli.rs       flags, --help                           │
-│  app.rs       the always-running loops (tick, reload) │
-│  auth.rs      the pairing secret and the challenge     │
-│    devices.rs   which devices are paired, and revoking │
-│  net/         the one port, HTTP and WebSocket:       │
-│    pages.rs     the phone page, compiled in by build.rs│
-│    origin.rs    who may open a socket at all          │
-│    shared.rs    devices + who drives the cursor       │
-│    session.rs   one phone's conversation              │
-│    settings.rs  the settings page: config in and out  │
-│    devices.rs   the connect page: who is paired       │
-│    observe.rs   the read-only debug feed              │
-│    status.rs    what the menu bar reads               │
-│  gesture/     touch → intent.  PURE, OS-agnostic      │
-│  sysprefs/    reads the host's real trackpad settings │
-│  input/       intent → OS events.  ONLY platform code │
-│    macos.rs     CGEvent: pixel scroll, click state    │
-│    portable.rs  enigo: Windows and Linux (unproven)   │
-│  sync.rs      locking that survives a panic           │
-│  pairing.rs   the QR, the connect page, the secret    │
-│  tray.rs      menu bar: a count and three items       │
-└───────────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+  S["<b>PHONE</b> · web/src/<br/>surface.ts<br/>raw touch points"] --> N["net.ts<br/>batched once<br/>per frame"]
+  N -->|"ws://<br/>same port that<br/>served the page"| SE["<b>DESKTOP</b> · desktop/src/<br/>net/session.rs<br/><i>one per device</i>"]
+  SE --> G["gesture/<br/><i>one engine per device</i><br/>pure, OS-agnostic"]
+  SP["sysprefs/<br/>your real<br/>trackpad settings"] -. "re-read ~2×/s" .-> G
+  G --> SH["net/shared.rs<br/>which device<br/>holds the cursor"]
+  SH --> I["input/<br/><i>one injector</i><br/>the only platform code"]
+  I --> OS(["macOS events"])
 ```
 
-One recognizer per connected device, all of them feeding one injector. That is
-the whole shape of the multi-device support, and the reason it is worth stating
-in a diagram: everything about a *gesture* is per phone, and everything about
-the *cursor* is shared.
+**One recognizer per connected device, all of them feeding one injector.** That
+is the whole shape of the multi-device support: everything about a *gesture* is
+per phone, everything about the *cursor* is shared.
+
+<details>
+<summary>Module by module</summary>
+
+**Phone** (`web/src/`) — `surface.ts` pointer capture and gesture suppression ·
+`net.ts` the WebSocket · `device.ts` what this phone calls itself ·
+`viewport.ts` noticing when the page really resized · `trail.ts` the canvas ·
+`trail/hold.ts` the long-press indicator and drag glow · `haptics.ts` vibration
+where it exists · `sound.ts` the click every phone can make · `ui.ts` status,
+settings sheet, whose turn it is · `config.ts` the settings page, generated from
+the config · `theme.css` the one visual language, see [design](design.md).
+
+**Desktop** (`desktop/src/`) — `cli.rs` flags · `app.rs` the always-running
+loops · `auth.rs` the pairing secret and challenge, with `auth/devices.rs` for
+who is paired · `pairing.rs` the QR and connect page · `tray.rs` the menu bar ·
+`sync.rs` locking that survives a panic.
+
+**Desktop `net/`**, the one port — `pages.rs` the phone page, compiled in by
+`build.rs` · `origin.rs` who may open a socket at all · `shared.rs` devices and
+who drives the cursor · `session.rs` one phone's conversation · `settings.rs`
+config in and out · `devices.rs` the connect page's live half · `observe.rs` the
+read-only debug feed · `status.rs` what the menu bar reads.
+
+**Desktop `input/`** — `macos.rs` CGEvent, pixel scroll, click state ·
+`portable.rs` enigo, for Windows and Linux (unproven).
+
+</details>
 
 **The phone page is inside the desktop app.** `desktop/build.rs` compiles
 `web/dist` into the binary and `net/pages.rs` serves it, so the box on the left

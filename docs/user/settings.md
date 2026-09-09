@@ -1,181 +1,131 @@
 # Settings
 
-Tap **Settings** at the bottom of the trackpad for quick changes on this device.
-Choose **All settings & gesture guide** for the full settings page, or open
-**Settings…** from the computer’s menu-bar icon.
+Two places, for two jobs.
 
-## Full settings
-
-The page opens on your connected devices, with the rest behind three cards:
-
-| Section | What you can do |
+| | |
 |---|---|
-| **Basic settings** | Adjust pointer and scrolling speed, natural scrolling, and press-and-drag |
-| **Gestures** | Choose what each gesture does |
-| **Advanced settings** | Adjust acceleration, zoom, timings, and other specialist options |
+| **Quick settings** — tap **Settings** at the bottom of the trackpad | Overrides for the device in your hand |
+| **The full page** — menu bar → **Settings…**, or **All settings** on the phone | Everything, saved on the computer |
 
-Each card says what is currently set behind it — the pointer speed, how many
-gestures are assigned — so most questions are answered without opening
-anything.
+It is the same page from the phone or the computer, live on both at once, and it
+saves as you change something. Anything your computer's own trackpad decides is
+shown locked, with the setting that decides it named beside it.
 
-**‹ Settings** at the top left returns to that list from any page, and **‹
-Trackpad** returns to the trackpad from the list. Your browser's Back button
-does the same.
+---
 
-Changes apply live. The status shows **Saving…** while a change is being sent,
-then **Saved on your computer** after the computer confirms it. Keep the
-computer connected to save changes.
+## Quick settings, on the phone
 
-### Connected devices
-
-The list at the top of the page: every device paired with this computer, the
-ones connected right now first, and the device currently moving the cursor
-named as such.
-
-Un-pairing is done on the computer: open Settings from the menu-bar icon and
-each device gets a **Forget** button, with **Forget all devices…** under the
-list. A device you forget has to scan the QR code again. Opened from a phone
-the list is there to read — a phone cannot revoke another phone's pairing, or
-its own.
-
-### Match my computer
-
-In Basics, **Match my computer** uses your computer’s trackpad preferences for
-the settings it controls. Those controls explain where their values come from.
-Turn this off to customize them in PadRemote.
-
-Open **View computer settings** to see which settings PadRemote matches,
-approximates, or cannot reproduce.
-
-### Gestures
-
-Open **Gestures** to see everything the trackpad can do. The page is three
-columns: the gestures on the left, the one you have picked demonstrated in the
-middle, and everything it can be set to on the right.
-
-Every row demonstrates itself: a small trackpad beside the name shows the
-fingers doing it, so one finger or three, sideways or up and down, can be told
-apart at a glance without reading a word. It is the same drawing as the large
-one in the middle, only smaller — a row and the demonstration beside it never
-show a gesture two different ways.
-
-The rows are grouped by the hand that makes them — **Pointer & taps**, then
-**2-finger swipes**, **3-finger swipes** and **4-finger swipes**.
-
-**Each direction is its own setting.** A three-finger swipe up and a
-three-finger swipe down are two rows, two demonstrations and two actions, so
-Mission Control upward and the volume downward is a thing you can have. The four
-directions of one hand sit together in the list, in the order left, right, up,
-down.
-
-A direction nobody has touched reads **Use existing setting**, and says what
-following currently does — *Use existing setting · Mission Control*. It follows
-the older paired setting for that axis, which is the one your computer's
-trackpad preferences are copied into, so an existing setup keeps working and
-**Match my computer** keeps reaching every direction. Choose anything else and
-only that direction stops following; the other three carry on as they were.
-
-Every action is listed at once rather than hidden in a menu, with a search box
-above them for the long lists. The few worth suggesting come first under
-**Recommended**, and the rest are listed alphabetically under **Other actions** —
-a tap can be bound to more than twenty things, from Mission Control and Spotlight
-to Copy, Close window and Lock screen.
-
-Actions are named for the one direction you are setting: **Mission Control**,
-**Volume up**, **Brightness down**, **Desktop left**. Only the actions a gesture can actually perform
-are offered, so nothing you pick can be quietly ignored — a sideways swipe is
-never offered Mission Control, which travels up and down.
-
-Dots on a small trackpad move the way your fingers would, on a slight curve
-because that is how fingertips actually land, and blur behind themselves as
-they cross the pad. The demonstrations loop on their own — there is nothing to
-press — and with reduced motion enabled they hold a single frame, where the
-blur left behind the fingers is what says which way the gesture goes. On a
-narrow screen the three columns stack: a picker, then the demonstration, then
-the actions.
-
-Actions are named the way your computer names them, so a Mac offers Mission
-Control and App windows while Windows offers Task View.
-
-While **Match my computer** is on, your computer's own trackpad settings decide
-the gestures they cover — the two-finger and three-finger taps — and those rows
-are greyed out with a note naming the setting that decides them. The same
-settings are what an untouched swipe direction follows, so a switch changed in
-System Settings changes what those directions do. Turn **Match my computer** off
-in Basics to choose something else, including actions your computer has no
-concept of, like the volume.
-
-It is the same on Basics: pointer speed and scrolling direction are greyed out
-while matching is on, because your computer keeps writing those and PadRemote
-could not hold a different value even if you set one. Wherever a control is
-greyed out, the note under it names the setting responsible, and the switch that
-releases it is the same one.
-
-### Which gestures exist
-
-Every gesture using more than one finger is a **swipe** — two, three or four
-fingers, up and down or left and right — plus taps with one, two or three
-fingers. Two fingers up and down is scrolling, which is not assignable: it is
-tuned in Basics instead.
-
-Pinching and double-tapping are not offered, and pinch zoom ships **off**. A
-pinch is the same two fingers moving as a two-finger swipe, and on a surface the
-size of a palm PadRemote has to tell them apart from a few millimetres of
-difference. It gets that wrong often enough that an ordinary scroll would zoom,
-which is worse than not having the gesture. Unlike most settings this one is
-*not* copied from your computer: whether a pinch belongs on a trackpad depends
-on how big the trackpad is, and your phone's answer differs from your Mac's.
-
-Launchpad and Show Desktop need a four-finger pinch and a five-finger spread, so
-they are not offered either. All of these remain under **Advanced** for anyone
-who wants them back.
-
-### Restore defaults
-
-**Advanced → Restore defaults** resets the computer’s PadRemote configuration
-after confirmation. Device-specific pointer speed and scrolling overrides are
-managed separately in quick settings.
-
-## Quick settings on your phone
+<img src="../img/pad-sheet.png" alt="The phone's settings sheet: device name, pointer speed, natural scrolling, click sound, full screen" width="240" align="right">
 
 | Control | What it changes |
 |---|---|
 | **Device name** | The name shown when several devices share a computer |
 | **Pointer speed** | A speed override for this device |
 | **Natural scrolling** | A scrolling-direction override for this device |
-| **Click sound** | Sound feedback when you press and release a drag |
-| **Full screen** | A quieter trackpad with the app controls hidden |
+| **Click sound** | Sound when a drag presses and releases |
+| **Full screen** | A quieter trackpad, with the app's controls hidden |
 
-Pointer speed and natural scrolling show **Matching your computer** until you
-change them. Once changed, that control becomes **Use my computer’s setting**
-and hands the setting back. A phone and tablet can keep different overrides.
+Pointer speed and natural scrolling read **Matching your computer** until you
+change one. Once changed, that control offers **Use my computer's setting** to
+hand it back. A phone and a tablet can keep different overrides, and an override
+survives the computer re-reading its own settings.
 
-This is a per-device override and is separate from **Match my computer** on the
-full settings page, which decides what the computer itself follows.
+<br clear="right">
+
+---
+
+## The full page
+
+<img src="../img/settings-home.png" alt="The settings hub: connected devices, then cards for Basic settings, Gestures and Advanced settings" width="640">
+
+It opens on your connected devices, with the rest behind three cards. Each card
+says what is currently set behind it — the pointer speed, how many gestures are
+assigned — so most questions are answered without opening anything.
+
+**‹ Settings** returns to that list from any page; **‹ Trackpad** returns to the
+trackpad. Your browser's Back button does the same.
+
+### Basic settings
+
+<img src="../img/settings-basics.png" alt="Basic settings: Match my computer, pointer speed, scrolling speed, natural scrolling, press and drag" width="640">
+
+**Match my computer** uses your computer's trackpad preferences for the settings
+it controls, and **What it copies** opens the report of exactly which ones it
+matched, adapted or could not reproduce. While it is on, the controls it covers
+are greyed out with a note naming the setting responsible — your computer keeps
+writing those, and PadRemote could not hold a different value even if you set
+one. The switch that releases them is the same one.
+
+### Gestures
+
+<img src="../img/settings-gestures.png" alt="The gestures page: a list of gestures on the left, the selected one demonstrated in the middle" width="640">
+
+Three columns: the gestures on the left, the one you picked demonstrated in the
+middle, everything it can be set to on the right. On a narrow screen they stack.
+
+Every row demonstrates itself — a small trackpad beside the name shows the
+fingers doing it, so one finger or three, sideways or up and down, can be told
+apart without reading a word. Dots move the way your fingers would, on a slight
+curve because that is how fingertips land, and blur behind themselves as they
+cross the pad. The loops run on their own; with reduced motion enabled they hold
+a single frame, where the blur is what says which way the gesture goes.
+
+Rows are grouped by the hand that makes them: **Pointer & taps**, then **2-**,
+**3-** and **4-finger swipes**.
+
+**Each direction is its own setting.** Three fingers up and three fingers down
+are two rows, two demonstrations and two actions — so Mission Control upward and
+the volume downward is a thing you can have. A direction nobody has touched
+reads **Use existing setting** and says what that currently does. Choose
+anything else and only that direction stops following.
+
+Every action is listed at once rather than hidden in a menu, with a search box
+for the long lists: a few **Recommended** first, then the rest alphabetically
+under **Other actions**. Only actions a gesture can actually perform are offered
+— a sideways swipe is never offered Mission Control, which travels up and down —
+and they are named the way your computer names them.
+
+### Advanced settings
+
+<img src="../img/settings-advanced.png" alt="Advanced settings: seven collapsed groups, then Restore defaults" width="640">
+
+Seven groups of specialist options — acceleration, tap timings, scrolling, zoom,
+dragging, swipe travel, and the bindings that are off by default (two-finger
+double tap, corner secondary click, four-finger pinch, five-finger spread).
+
+**Restore defaults** resets the computer's configuration after confirmation.
+Per-device overrides from quick settings are separate, and stay.
+
+---
 
 ## Full screen
 
-Tap **Full screen** in the trackpad toolbar, or use **Toggle** in quick settings.
-Use **Exit full screen** to bring the controls back.
+Tap **Full screen** in the trackpad toolbar, or **Toggle** in quick settings;
+**Exit full screen** brings the controls back. Shaking the phone can toggle it
+too, where the browser allows motion access — a plain HTTP connection does not,
+and quick settings says so and offers **Allow shake** when permission can be
+asked for.
 
-Shaking can also toggle full screen when the browser permits motion access.
-Quick settings explains when motion is unavailable and offers **Allow shake**
-when permission can be requested. A plain HTTP connection does not provide
-motion access.
+The browser decides whether the page can use native full screen. When it cannot,
+PadRemote hides its own controls instead. On an iPhone, adding the page to the
+Home Screen gives you a way to open it without the usual browser bars.
 
-The browser decides whether the page can use native full screen. When it
-cannot, PadRemote hides its own controls. On an iPhone, adding the page to the
-Home Screen provides a way to open it without the usual browser bars.
+## Un-pairing
 
-## Configuration file
+Done on the computer: the connect page gives each device a **Forget** button,
+with **Forget all devices** under the list. See
+[getting started](getting-started.md#your-devices). Opened from a phone the
+device list is there to read — a phone cannot revoke another phone's pairing, or
+its own.
 
-You can also edit
-`~/Library/Application Support/PadRemote/config.json`.
-The settings page prints the path at the bottom, so you can open it from there.
-PadRemote reloads edits while running.
+## The configuration file
 
-The first save from the settings page expands the file to include every current
-setting. Existing effective values stay the same; unrecognized keys are removed.
+Underneath, all of it is
+`~/Library/Application Support/PadRemote/config.json` — the settings page prints
+the path at the bottom. It **hot-reloads**, so editing it by hand works exactly
+as the page does. The first save from the page expands the file to include every
+current setting; effective values stay the same, and unrecognised keys are
+removed.
 
-The settings page requires a connected computer. Sample-data demo mode and
-animated gesture previews are no longer included.
+The settings page needs a connected computer: it renders from the config the
+computer sends, so there is no demo mode.

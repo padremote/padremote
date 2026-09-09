@@ -3,6 +3,92 @@
 Traps that have already cost real debugging time. Each has a symptom, because
 the symptom is how you'll meet it again.
 
+**Jump to:** [macOS input injection](#macos-input-injection) · [the gesture engine](#the-gesture-engine) · [configuration](#configuration) · [networking](#networking) · [the interface](#the-interface) · [the web page](#the-web-page)
+
+<details>
+<summary><b>Every trap by name</b> — all 61 of them</summary>
+
+**macOS input injection**
+
+- [The injector's cursor position goes stale, and the cursor jumps](#the-injectors-cursor-position-goes-stale-and-the-cursor-jumps)
+- [Modifiers must be real key events, not flags](#modifiers-must-be-real-key-events-not-flags)
+- [Arrow keys need `NumericPad`](#arrow-keys-need-numericpad)
+- [Volume and brightness are media keys, not keystrokes](#volume-and-brightness-are-media-keys-not-keystrokes)
+- [A scratch binary can post mouse events but not media keys](#a-scratch-binary-can-post-mouse-events-but-not-media-keys)
+- [Brightness measured in `ioreg` looks stuck when it is not](#brightness-measured-in-ioreg-looks-stuck-when-it-is-not)
+- [Scroll needs gesture phases](#scroll-needs-gesture-phases)
+- [`CGEventSource::new()` is not an Accessibility check](#cgeventsourcenew-is-not-an-accessibility-check)
+- [An ad-hoc signature has no identity across rebuilds](#an-ad-hoc-signature-has-no-identity-across-rebuilds)
+- [A missing permission must not exit a menu-bar app](#a-missing-permission-must-not-exit-a-menu-bar-app)
+- […and the phone has to be told the same thing](#and-the-phone-has-to-be-told-the-same-thing)
+- [Pixel scroll is behind a feature flag](#pixel-scroll-is-behind-a-feature-flag)
+- [`pyobjc`'s scroll signature (prototype only)](#pyobjcs-scroll-signature-prototype-only)
+
+**The gesture engine**
+
+- [A multi-finger tap timed per finger fails as the count goes up](#a-multi-finger-tap-timed-per-finger-fails-as-the-count-goes-up)
+- [A finger landing mid-move used to be thrown away](#a-finger-landing-mid-move-used-to-be-thrown-away)
+- [Judge on peak fingers, not current](#judge-on-peak-fingers-not-current)
+- [A pinch is opposing motion, not a distance change](#a-pinch-is-opposing-motion-not-a-distance-change)
+- [A multi-finger pinch must beat the hand's travel](#a-multi-finger-pinch-must-beat-the-hands-travel)
+- [The dragging flags are one choice, not two](#the-dragging-flags-are-one-choice-not-two)
+- [Deltas are consume-once](#deltas-are-consume-once)
+
+**Configuration**
+
+- [`#[serde(default)]` on a struct calls `Default::default()`](#serdedefault-on-a-struct-calls-defaultdefault)
+- [macOS preferences are inconsistently typed](#macos-preferences-are-inconsistently-typed)
+
+**Networking**
+
+- [A stale socket's `onclose` must not touch the live one](#a-stale-sockets-onclose-must-not-touch-the-live-one)
+- [Vite HMR leaves the old module's socket alive](#vite-hmr-leaves-the-old-modules-socket-alive)
+- [Opening the phone page on the Mac joins as another device](#opening-the-phone-page-on-the-mac-joins-as-another-device)
+- [One recognizer cannot serve two devices](#one-recognizer-cannot-serve-two-devices)
+- [Eviction was the "two devices are laggy" bug](#eviction-was-the-two-devices-are-laggy-bug)
+- [Work done "in case someone is watching" is work done sixty times a second](#work-done-in-case-someone-is-watching-is-work-done-sixty-times-a-second)
+- [The heartbeat must not share a task with anything that blocks](#the-heartbeat-must-not-share-a-task-with-anything-that-blocks)
+- [Handover must happen at a gesture boundary, and not instantly](#handover-must-happen-at-a-gesture-boundary-and-not-instantly)
+- [A poisoned mutex takes the app deaf, permanently](#a-poisoned-mutex-takes-the-app-deaf-permanently)
+- [The phone's own defaults can defeat the mirroring](#the-phones-own-defaults-can-defeat-the-mirroring)
+- [An overridden setting must outlive a config reload](#an-overridden-setting-must-outlive-a-config-reload)
+- [A JSON object is a *sorted* map by default](#a-json-object-is-a-sorted-map-by-default)
+- [The same table written twice drifts within a day](#the-same-table-written-twice-drifts-within-a-day)
+- [An observer is not a phone](#an-observer-is-not-a-phone)
+- [A `file://` page has no origin, so it cannot talk to the app](#a-file-page-has-no-origin-so-it-cannot-talk-to-the-app)
+- [A menu is the wrong shape for a list](#a-menu-is-the-wrong-shape-for-a-list)
+
+**The interface**
+
+- [A class name that is not written out in full generates nothing](#a-class-name-that-is-not-written-out-in-full-generates-nothing)
+- [The connect page is not built, scanned, or themed](#the-connect-page-is-not-built-scanned-or-themed)
+- [Two of the stylesheets are not styling](#two-of-the-stylesheets-are-not-styling)
+
+**The web page**
+
+- [A phone browser has not settled on a size when your code runs](#a-phone-browser-has-not-settled-on-a-size-when-your-code-runs)
+- [Motion sensors need a secure context, and the LAN page is not one](#motion-sensors-need-a-secure-context-and-the-lan-page-is-not-one)
+- [iPhone Safari has no Fullscreen API](#iphone-safari-has-no-fullscreen-api)
+- [A `<canvas>` is a replaced element](#a-canvas-is-a-replaced-element)
+- [A settings page must never invent a value](#a-settings-page-must-never-invent-a-value)
+- [Two animations meeting is where the glitch is](#two-animations-meeting-is-where-the-glitch-is)
+- [Stroking segment-by-segment looks like beads](#stroking-segment-by-segment-looks-like-beads)
+- [The feedback loop](#the-feedback-loop)
+- [Haptics barely exist on the web](#haptics-barely-exist-on-the-web)
+- [A prevented `touchstart` silently disables vibration on Android](#a-prevented-touchstart-silently-disables-vibration-on-android)
+- [An uncancelled touch costs a compatibility mouse event every frame](#an-uncancelled-touch-costs-a-compatibility-mouse-event-every-frame)
+- [Screen-wide feedback must be gated, not just drawn](#screen-wide-feedback-must-be-gated-not-just-drawn)
+- [A still finger sends no events, so nothing can wait for one](#a-still-finger-sends-no-events-so-nothing-can-wait-for-one)
+- [The trail canvas must stay full-bleed](#the-trail-canvas-must-stay-full-bleed)
+- [An armed drag must not re-enter the charging state](#an-armed-drag-must-not-re-enter-the-charging-state)
+- [A long press cannot earn its own user activation](#a-long-press-cannot-earn-its-own-user-activation)
+- [The press ring must not restart itself mid-move](#the-press-ring-must-not-restart-itself-mid-move)
+- [A full-screen effect must be cached and clipped](#a-full-screen-effect-must-be-cached-and-clipped)
+- [A long hold accumulates jitter](#a-long-hold-accumulates-jitter)
+- [`setPointerCapture` can throw](#setpointercapture-can-throw)
+
+</details>
+
 ## macOS input injection
 
 ### The injector's cursor position goes stale, and the cursor jumps
