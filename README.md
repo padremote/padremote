@@ -32,7 +32,7 @@ Both devices on the same Wi-Fi. [Full walkthrough →](docs/user/getting-started
 
 ## What it does
 
-| | |
+| Gesture | What happens |
 |---|---|
 | Move one finger | Cursor, with a macOS-like acceleration curve |
 | Tap · two-finger tap · three-finger tap | Left · right · middle click |
