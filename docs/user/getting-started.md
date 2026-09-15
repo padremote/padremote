@@ -18,7 +18,9 @@ Apple Silicon or Intel.
 
 The download is not notarized yet, so the first time you open it macOS says it
 *could not verify "PadRemote" is free of malware*. Click **Done**, then
-**System Settings → Privacy & Security → Open Anyway**. Once is enough.
+**System Settings → Privacy & Security → Open Anyway**. That copy is then
+allowed for good, but a reinstall or an update is a new copy, and macOS asks
+again.
 
 A dragged-in copy does not start by itself after a restart. Add it under
 **System Settings → General → Login Items** if you want it to. Updating,

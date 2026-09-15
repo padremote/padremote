@@ -18,7 +18,7 @@
 
 **[Download PadRemote.dmg](https://github.com/padremote/padremote/releases/latest/download/PadRemote.dmg)**
 and drag it into Applications. macOS 13 or later, Apple Silicon or Intel.
-It isn't notarized yet, so the first open needs one click in
+It isn't notarized yet, so each new install or update needs one click in
 **Privacy & Security → Open Anyway**. [Install on macOS →](https://github.com/padremote/padremote/wiki/Install-on-macOS)
 
 Or build it yourself (needs Rust and Node):
