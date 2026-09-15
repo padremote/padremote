@@ -33,6 +33,7 @@ desktop/                  the Rust app
   src/bin/replay.rs       replay a recorded stream, with or without injection
   tests/fixtures/         eleven recorded gestures
   packaging/make-app.sh   builds PadRemote.app (page included)
+  packaging/make-dmg.sh   wraps it in PadRemote.dmg, the download
 web/                      the five pages Vite builds, and their checks
   src/theme.css           the one visual language: Tailwind's tokens - see design.md
   index.html              the trackpad
@@ -233,6 +234,31 @@ Accessibility grant survives rebuilds, and nudges Spotlight.
 
 Not yet Developer ID signed or notarized: on another Mac, Gatekeeper still
 objects. That is milestone 5.
+
+### The download
+
+```sh
+./desktop/packaging/make-dmg.sh              # → dist/PadRemote.dmg + .sha256
+```
+
+A universal (arm64 + x86_64) build of the same bundle, in a disk image with an
+Applications shortcut to drag it onto. Needs both Rust targets:
+`rustup target add aarch64-apple-darwin x86_64-apple-darwin`.
+
+Releasing is a tag. `.github/workflows/release.yml` builds the image on a Mac
+runner and attaches it to a GitHub Release:
+
+```sh
+# bump version in desktop/Cargo.toml first - the workflow refuses a mismatch
+git tag v0.1.0 && git push origin v0.1.0
+```
+
+Everything that offers the download — the README, the wiki's
+[Install on macOS](https://github.com/padremote/padremote/wiki/Install-on-macOS)
+page, the website — links to
+`releases/latest/download/PadRemote.dmg`, which GitHub resolves to the newest
+release. That is why the file name never carries a version: rename it and
+every one of those links breaks on the next release.
 
 ## The Python prototype
 

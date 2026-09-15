@@ -7,15 +7,34 @@ phone — it just opens a web page.
 
 ## 1. Install
 
+Two ways to install. Pick one, not both: two copies fight over the same port,
+and the second one quits.
+
+### Download it
+
+**[PadRemote.dmg](https://github.com/padremote/padremote/releases/latest/download/PadRemote.dmg)**
+— open it and drag **PadRemote** onto **Applications**. macOS 13 or later,
+Apple Silicon or Intel.
+
+The download is not notarized yet, so the first time you open it macOS says it
+*could not verify "PadRemote" is free of malware*. Click **Done**, then
+**System Settings → Privacy & Security → Open Anyway**. Once is enough.
+
+A dragged-in copy does not start by itself after a restart. Add it under
+**System Settings → General → Login Items** if you want it to. Updating,
+uninstalling and every dialog on the way are on the wiki:
+[Install on macOS](https://github.com/padremote/padremote/wiki/Install-on-macOS).
+
+### Or build it
+
 ```sh
 ./install.sh
 ```
 
 That is the whole install: it builds the phone page *into* the app, installs to
 `~/Applications`, offers to start PadRemote when you log in, and launches it.
-
-It lives in the menu bar — no Dock icon, no window. Find it again with
-**Cmd-Space**, type **PadRemote**.
+Needs Rust and Node. A copy you built on your own Mac opens without the
+Gatekeeper question.
 
 | | |
 |---|---|
@@ -23,9 +42,8 @@ It lives in the menu bar — no Dock icon, no window. Find it again with
 | `./install.sh --login` / `--no-login` | The same, without being asked |
 | `./install.sh --uninstall` | Remove the app and the login item. Settings and pairing are kept |
 
-> Building it yourself is the only option today. A signed, notarized `.dmg` is
-> milestone 5 of [`plan.md`](../../plan.md); until then a copy built on another
-> Mac would be blocked by Gatekeeper.
+Either way it lives in the menu bar — no Dock icon, no window. Find it again
+with **Cmd-Space**, type **PadRemote**.
 
 ---
 
@@ -43,7 +61,9 @@ Two things to expect:
 - **And per build.** Without a code-signing certificate the app is signed
   ad-hoc, so macOS treats every rebuild as a different app: the box stays ticked
   and the app is still refused. `install.sh` clears the stale grant and prints
-  the one-time way to make grants survive rebuilds.
+  the one-time way to make grants survive rebuilds. A newly downloaded version
+  counts as a rebuild too: remove PadRemote from the list with **–** and grant
+  it again.
 
 Without it, PadRemote refuses to start rather than running silently — macOS
 accepts every event and quietly discards it, which looks exactly like a broken

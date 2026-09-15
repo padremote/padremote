@@ -1,0 +1,83 @@
+# Publish PadRemote.dmg to a GitHub Release when a version tag is pushed.
+#
+#   git tag v0.1.0 && git push origin v0.1.0
+#
+# The release is the download. The README, the wiki and the website all link to
+#   https://github.com/padremote/padremote/releases/latest/download/PadRemote.dmg
+# which GitHub resolves to the newest release's asset of that name - so nothing
+# that links to it has to change when a new version ships. See make-dmg.sh for
+# why the file name carries no version.
+#
+# Separate from ci.yml on purpose: CI runs on every push and must stay fast and
+# free of write permissions; this runs a few times a year and needs to create a
+# release.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  dmg:
+    name: PadRemote.dmg
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          # Both, for a universal binary: the runner is Apple Silicon, and a
+          # download has to run on an Intel Mac too.
+          targets: aarch64-apple-darwin, x86_64-apple-darwin
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      # A tag that disagrees with Cargo.toml publishes an app whose About box
+      # and Info.plist name a different version from the page it was downloaded
+      # from. Cheap to catch here, impossible to take back once people have it.
+      - name: The tag matches Cargo.toml
+        run: |
+          version="$(grep -m1 '^version' desktop/Cargo.toml | cut -d'"' -f2)"
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match desktop/Cargo.toml version $version"
+            exit 1
+          fi
+
+      - name: Build PadRemote.dmg
+        run: ./desktop/packaging/make-dmg.sh
+
+      # The body is the part people read before they open the file, so it says
+      # the one thing that will otherwise look like a broken download.
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > "$RUNNER_TEMP/notes.md" <<'NOTES'
+          ## Install on a Mac
+
+          1. Download **PadRemote.dmg** below and open it.
+          2. Drag **PadRemote** onto **Applications**.
+          3. Open PadRemote from Applications. The first time, macOS says it
+             cannot check it for malware, because this build is not notarized
+             yet: click **Done**, then **System Settings → Privacy & Security →
+             Open Anyway**.
+          4. Grant **Accessibility** when asked, then scan the QR with your phone.
+
+          Full walkthrough: [Install on macOS](https://github.com/padremote/padremote/wiki/Install-on-macOS)
+          NOTES
+          gh release create "$GITHUB_REF_NAME" \
+            dist/PadRemote.dmg dist/PadRemote.dmg.sha256 \
+            --title "PadRemote $GITHUB_REF_NAME" \
+            --notes-file "$RUNNER_TEMP/notes.md" \
+            --generate-notes

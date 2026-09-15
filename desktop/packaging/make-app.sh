@@ -3,7 +3,14 @@
 #
 # This is the first step of the "installs like Ollama" bar (plan.md §11.1). It is
 # not yet signed or notarized, so Gatekeeper will still ask on a machine other
-# than the one that built it - that comes with the .dmg in milestone 5.
+# than the one that built it - make-dmg.sh wraps this bundle for download, and
+# the download's docs walk through that one-time question.
+#
+#   UNIVERSAL=1   one binary for Apple Silicon and Intel (needs both Rust
+#                 targets); the default builds for this Mac only, which is
+#                 faster and all an install on this Mac needs
+#   STAGE_ONLY=1  the destination is a scratch folder, not an install: skip
+#                 the Accessibility reset and the Spotlight nudge
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -39,13 +46,29 @@ if [ ! -f "$WEB/dist/index.html" ]; then
   echo "==> WARNING: web/dist has no page in it; this app will serve nothing"
 fi
 
-echo "==> building release binary"
-cargo build --release --manifest-path "$CRATE/Cargo.toml"
+if [ "${UNIVERSAL:-0}" = "1" ]; then
+  # Built per target and glued with lipo. `cargo build --target` writes to
+  # target/<triple>/release, never target/release, so the glued copy gets a
+  # directory of its own rather than overwriting whatever a plain build left.
+  echo "==> building release binary (universal: arm64 + x86_64)"
+  for triple in aarch64-apple-darwin x86_64-apple-darwin; do
+    cargo build --release --target "$triple" --manifest-path "$CRATE/Cargo.toml"
+  done
+  BIN="$CRATE/target/universal/release/padremote"
+  mkdir -p "$(dirname "$BIN")"
+  lipo -create -output "$BIN" \
+    "$CRATE/target/aarch64-apple-darwin/release/padremote" \
+    "$CRATE/target/x86_64-apple-darwin/release/padremote"
+else
+  echo "==> building release binary"
+  cargo build --release --manifest-path "$CRATE/Cargo.toml"
+  BIN="$CRATE/target/release/padremote"
+fi
 
 echo "==> assembling $APP"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp "$CRATE/target/release/padremote" "$APP/Contents/MacOS/$APP_NAME"
+cp "$BIN" "$APP/Contents/MacOS/$APP_NAME"
 
 VERSION="$(grep -m1 '^version' "$CRATE/Cargo.toml" | cut -d'"' -f2)"
 cat > "$APP/Contents/Info.plist" <<PLIST
@@ -99,6 +122,14 @@ if [ -n "${CODESIGN_IDENTITY:-}" ]; then
 else
   codesign --force --deep --sign - "$APP" >/dev/null 2>&1 \
     && echo "==> signed (ad-hoc)" || echo "==> could not sign"
+fi
+
+if [ "${STAGE_ONLY:-0}" = "1" ]; then
+  # A bundle on its way into a .dmg. Resetting Accessibility here would revoke
+  # the grant of the copy this Mac actually has installed, over a build nobody
+  # is going to run from this folder.
+  echo "==> staged: $APP"
+  exit 0
 fi
 
 NEW_CDHASH="$(codesign -dvvv "$APP" 2>&1 | sed -n 's/^CDHash=//p' || true)"

@@ -16,12 +16,19 @@
 
 ## Install
 
+**[Download PadRemote.dmg](https://github.com/padremote/padremote/releases/latest/download/PadRemote.dmg)**
+and drag it into Applications. macOS 13 or later, Apple Silicon or Intel.
+It isn't notarized yet, so the first open needs one click in
+**Privacy & Security → Open Anyway**. [Install on macOS →](https://github.com/padremote/padremote/wiki/Install-on-macOS)
+
+Or build it yourself (needs Rust and Node):
+
 ```sh
 ./install.sh
 ```
 
 Builds the app with the phone page inside it, installs it to `~/Applications`,
-launches it. Grant **Accessibility** when macOS asks. Needs Rust and Node.
+launches it. Either way, grant **Accessibility** when macOS asks.
 
 | 1. Open the QR | 2. Scan it | 3. That's it |
 |:--:|:--:|:--:|
