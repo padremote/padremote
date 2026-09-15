@@ -21,9 +21,8 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  # macOS, because the input backend, the trackpad mirroring and the tray are
-  # all macOS-only: a Linux runner would compile a stub of the app and report
-  # success on code nobody ships.
+  # macOS, because PadRemote is a macOS app and nothing else: `build.rs`
+  # refuses any other target, so this is the only runner that can build it.
   desktop:
     name: desktop (rust)
     runs-on: macos-latest
@@ -71,17 +70,6 @@ jobs:
         working-directory: web
       - name: The app serves the page it was built with
         run: cargo test --test pages
-
-      # The Windows and Linux code paths are written but unproven (see
-      # docs/dev/porting.md). Type-checking them here is what stops them
-      # rotting silently: without it, a change to the `Injector` trait or to
-      # `HostTrackpad` breaks a platform nobody compiles until someone tries to
-      # ship it. Windows only - `enigo`'s Linux path needs X11 and D-Bus
-      # headers, which a macOS runner cannot provide.
-      - name: Windows still compiles
-        run: |
-          rustup target add x86_64-pc-windows-msvc
-          cargo check --target x86_64-pc-windows-msvc --all-targets
 
   web:
     name: phone page (typescript)

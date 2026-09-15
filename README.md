@@ -14,6 +14,10 @@
   <a href="docs/user/troubleshooting.md">troubleshooting</a>
 </p>
 
+> **macOS only.** PadRemote currently supports macOS 13 or later. Linux and
+> Windows are not supported yet — the app does not build for them.
+> [Platform support →](docs/dev/porting.md)
+
 ## Install
 
 **[Download PadRemote.dmg](https://github.com/padremote/padremote/releases/latest/download/PadRemote.dmg)**
@@ -71,7 +75,7 @@ Settings and it follows within seconds.
 - **Pairing is enforced** — the QR carries a 128-bit secret, every connection
   answers an HMAC-SHA256 challenge, web pages are refused at the handshake, and
   **Forget** revokes one device without disturbing the others.
-- **Not yet** — TLS, PWA install, a signed installer. The link is plain `ws://`.
+- **Not yet** — Linux and Windows, TLS, PWA install, a signed installer. The link is plain `ws://`.
   [Threat model →](docs/dev/threat-model.md)
 
 ## Build from source
@@ -89,8 +93,8 @@ It prints the address to open on your phone.
 [design](docs/dev/design.md) · [protocol](docs/dev/protocol.md) ·
 [gotchas](docs/dev/gotchas.md) — every trap that has already cost a day
 
-The gesture engine is pure and OS-agnostic; the Windows and Linux backends are
-written but **have never been run on real hardware**
-([porting](docs/dev/porting.md)). Everything is indexed in
+PadRemote supports **macOS only**; Linux and Windows are not supported yet.
+The gesture engine is pure and OS-agnostic, and
+[platform support](docs/dev/porting.md) says what a port would take. Everything is indexed in
 [`docs/`](docs/README.md); the specification is [`plan.md`](plan.md). Licensed
 [MIT](LICENSE).

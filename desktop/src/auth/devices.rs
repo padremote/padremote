@@ -317,7 +317,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(unix)]
     fn the_list_is_owner_only() {
         use std::os::unix::fs::PermissionsExt;
         let path = temp("mode");

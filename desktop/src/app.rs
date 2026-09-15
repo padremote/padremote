@@ -148,7 +148,6 @@ fn config_path_mtime(path: &Option<PathBuf>) -> Option<SystemTime> {
 /// Ticking the box in System Settings does not restart us, and telling the user
 /// to quit and relaunch for a permission they just granted is a poor way to be
 /// met. Stops as soon as the backend is swapped in.
-#[cfg(target_os = "macos")]
 pub fn spawn_permission_watch(runtime: &Runtime, shared: Arc<Shared>) {
     runtime.spawn(async move {
         loop {

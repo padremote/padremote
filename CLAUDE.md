@@ -1,6 +1,8 @@
 # PadRemote
 
-A phone becomes a trackpad for a Mac. Two halves, one product:
+A phone becomes a trackpad for a Mac. **macOS only** — Linux and Windows are not
+supported, and `desktop/build.rs` refuses to build for them. Two halves, one
+product:
 
 - `desktop/` — Rust menu-bar app. Gesture engine, input injection, the
   WebSocket server, and the phone page compiled into the binary.

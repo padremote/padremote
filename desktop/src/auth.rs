@@ -160,7 +160,6 @@ impl Secret {
 /// The mode is given at creation rather than fixed afterwards, so the contents
 /// never exist at the default mode - not even for the instant between the two,
 /// which is an instant another account on this machine can win a race for.
-#[cfg(unix)]
 pub(crate) fn write_private(path: &Path, contents: &str) -> io::Result<()> {
     use std::io::Write;
     use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
@@ -174,11 +173,6 @@ pub(crate) fn write_private(path: &Path, contents: &str) -> io::Result<()> {
     // earlier run - or planted by someone else - is tightened here as well.
     file.set_permissions(PermissionsExt::from_mode(0o600))?;
     file.write_all(contents.as_bytes())
-}
-
-#[cfg(not(unix))]
-pub(crate) fn write_private(path: &Path, contents: &str) -> io::Result<()> {
-    std::fs::write(path, contents)
 }
 
 /// Is this something a device may call itself?
@@ -327,7 +321,6 @@ mod tests {
         let read = Secret::load_or_create(&path).expect("read back");
         assert!(made == read, "a restart must not re-pair every phone");
 
-        #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
             let mode = std::fs::metadata(&path).unwrap().permissions().mode();

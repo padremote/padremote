@@ -1,6 +1,6 @@
 # PadRemote — Phone Touchscreen as a Wireless Trackpad
 
-**v1 target OS: macOS.** The phone page, protocol, networking, pairing and gesture *recognizer* are OS-independent; only the input-injection backend is platform-specific. Windows and Linux are planned as additional backends behind the same engine (section 16), so nothing in the architecture is Mac-only.
+**Supported OS: macOS only.** Linux and Windows are not supported yet. The phone page, protocol, networking, pairing and gesture *recognizer* are OS-independent, and only the input-injection backend and the trackpad-settings reader call the OS, so a port stays possible later (section 16) — but no non-macOS code ships, and the desktop app does not build for any other system.
 
 Domain: **padremote.com** (single domain; no other TLDs needed for v1).
 - `https://padremote.com` — landing page; phone web app served at `/go` (`https://padremote.com/go`)
@@ -11,7 +11,7 @@ Domain: **padremote.com** (single domain; no other TLDs needed for v1).
 
 Turn the phone's touchscreen into a wireless trackpad for the computer, with the feel of a built-in laptop trackpad. The computer shows a QR code; the user scans it with the phone's camera app, which opens a web page; that page is a blank touch surface. Finger movements and multi-touch gestures on the phone drive the computer's cursor, clicks, scrolling, dragging and zoom. Only the **computer** has an installed app; the phone runs a web page with nothing to install.
 
-There is **no camera, no computer vision, no hand tracking** in this design. The phone's operating system reports touch positions directly; the work is turning those touches into operating-system input events. v1 ships on macOS; the same app targets Windows and Linux with a different injection backend (section 16).
+There is **no camera, no computer vision, no hand tracking** in this design. The phone's operating system reports touch positions directly; the work is turning those touches into operating-system input events. It supports macOS only; Linux and Windows are not supported yet (section 16).
 
 **v1 gesture set (all required):** relative cursor movement, tap = left click, two-finger tap = right click, two-finger drag = scroll, pinch = zoom, tap-and-drag and press-and-drag = drag. Movement is **relative** (like a trackpad), not absolute.
 
@@ -36,7 +36,7 @@ There is **no camera, no computer vision, no hand tracking** in this design. The
 ┌──────────── Computer: desktop app (Rust, one binary/OS) ──────┐
 │ WebSocket server (rustls, self-signed) · pairing store        │
 │ Gesture engine (touch → intent)  ── shared, OS-agnostic       │
-│ Input injector (enigo + per-OS): move/click/scroll/drag/zoom  │
+│ Input injector (CGEvent, macOS): move/click/scroll/drag/zoom  │
 │ Tray icon: QR, status, settings · guided first-run permission │
 └───────────────────────────────────────────────────────────────┘
 
@@ -48,7 +48,7 @@ Design rules:
 - The phone page is intentionally dumb: it reports **raw touch points**, nothing more. It does not decide what a tap or a scroll is.
 - **All gesture interpretation lives on the desktop app**, driven by `config.json`, so behaviour and sensitivity can be tuned without redeploying the page.
 - v1 transport is a **plain WebSocket over the local Wi‑Fi** (both devices are on the same network for a desk trackpad), so there is **no hosted server and no signaling** to run. WebRTC + a signaling worker is kept as a later upgrade for the cross-network case only (section 16).
-- The desktop app is one **compiled Rust binary** per OS; the gesture engine and config are shared across macOS/Windows/Linux, and only the input-injection backend differs.
+- The desktop app is one **compiled Rust binary** for macOS; the gesture engine and config are OS-agnostic, so only the input-injection backend and settings reader would differ if another system were ever supported.
 - The protocol is client-agnostic; a native phone app could replace the web page later without touching the desktop side.
 
 ## 4. Repository layout (monorepo)
@@ -58,14 +58,14 @@ padremote/
 ├── PLAN.md
 ├── protocol/              # shared message schema + version
 │   └── v1.schema.json
-├── desktop/               # cross-platform desktop app (Rust, one binary per OS)
+├── desktop/               # macOS desktop app (Rust, one binary)
 │   ├── src/
 │   │   ├── main.rs        # tray icon, first-run/permission flow, lifecycle
 │   │   ├── net.rs         # local WebSocket server, discovery, pairing store
 │   │   ├── gesture/       # touch→intent recognizer, config, accel curve (shared, OS-agnostic)
-│   │   └── input/         # injection backend: macos.rs / windows.rs / linux.rs (enigo + per-OS)
+│   │   └── input/         # injection backend: macos.rs (CGEvent)
 │   ├── tests/             # recognizer tests on recorded touch streams
-│   └── packaging/         # .dmg (mac), .msi/.exe (win), install.sh + .deb (linux)
+│   └── packaging/         # PadRemote.app via install.sh; a signed .dmg later
 ├── web/                   # phone page (Vite + TypeScript, no framework)
 │   ├── src/
 │   │   ├── surface.ts     # pointer/touch capture, gesture-suppression
@@ -90,17 +90,17 @@ Note: `mac/` (Swift) and `signaling/` (Cloudflare Worker) from earlier drafts ar
 - Installable PWA (manifest + service worker) so "Add to Home Screen" gives an app icon and offline load.
 - Hosted as static files on Cloudflare Pages at `padremote.com`; app at `/go`. In v1 the page connects to the desktop app directly; no other server is contacted after the page loads.
 
-### Desktop app (Rust, cross-platform; v1 ships macOS 13+)
-- **Rust**, one self-contained compiled binary per OS — no runtime for the user to install (the "installs like Ollama" bar). Windows and Linux reuse everything below except the injection backend.
+### Desktop app (Rust; macOS 13+ only)
+- **Rust**, one self-contained compiled binary per OS — no runtime for the user to install (the "installs like Ollama" bar). Linux and Windows are not supported yet; a port would reuse everything below except the injection backend and the settings reader.
 - Tray/menu-bar UI: `tray-icon` + a minimal settings window (`tao`/`muda`, or a small `egui`/Tauri shell if a richer window is wanted). QR rendered with the `qrcode` crate.
 - Local server: `tokio` + `tokio-tungstenite` WebSocket listener on the LAN, advertised for discovery (see section 7). TLS via `rustls` with a self-signed cert (needed because the phone page is served over HTTPS and must reach `wss://`).
-- Input injection: **`enigo`** as the cross-platform base (move, click, scroll, key events on macOS/Windows/Linux), with a thin per-OS module for anything `enigo` doesn't cover:
+- Input injection: **CGEvent** directly (move, click, scroll, key events), because a portable layer such as `enigo` exposes neither pixel scrolling with gesture phases nor click state:
   - Move: relative cursor motion from accumulated deltas.
   - Click / right-click / middle-click / drag: button press/release with click-state for double-click.
   - Scroll: pixel/line scroll; smooth pixel scroll where the OS supports it.
   - Zoom: **hardest everywhere.** No OS exposes a universal synthetic magnify event. v1 uses app-level zoom (`⌘/Ctrl =` `⌘/Ctrl -`, or `Cmd/Ctrl`+scroll where honoured). Native magnify-gesture synthesis (`kCGEventGesture` on macOS, etc.) is a later spike. The recognizer emits clean zoom data regardless; only injection is approximate.
-- Permissions: macOS needs **Accessibility** (`AXIsProcessTrustedWithOptions`); the app must detect it's missing and run the guided first-run flow in section 11.1. (Windows: none for `SendInput`. Linux: user in the `input` group for `uinput`, or X11 `XTEST`.)
-- Config: `~/Library/Application Support/PadRemote/config.json` on macOS (`%APPDATA%`/`~/.config` on Win/Linux), hot-reloaded.
+- Permissions: macOS needs **Accessibility** (`AXIsProcessTrustedWithOptions`); the app must detect it's missing and run the guided first-run flow in section 11.1.
+- Config: `~/Library/Application Support/PadRemote/config.json`, hot-reloaded.
 - Tests: Rust unit/integration tests, recognizer driven by recorded touch-point sequences.
 
 ### Signaling service
@@ -289,17 +289,15 @@ Losing the connection or receiving `cancel` releases every held button immediate
 
 ### 11.1 Install & first-run experience (the "installs like Ollama" bar)
 
-The whole point of choosing a single compiled Rust binary is that installation is trivial and familiar. Required experience per OS:
+The whole point of choosing a single compiled Rust binary is that installation is trivial and familiar. Required experience (macOS is the only supported system):
 
 - **macOS:** distribute a `.dmg` — drag the app to Applications, open it. The build is **Developer ID signed and notarized** so Gatekeeper shows no "unidentified developer" block. (Not the Mac App Store: input injection needs Accessibility, which sandboxed App Store apps can't have.) Optional Homebrew cask (`brew install --cask padremote`) for the CLI-inclined.
-- **Windows:** a signed `.msi`/`.exe` installer, click-through, runs in the tray. Code-signing certificate to avoid SmartScreen warnings.
-- **Linux:** a `curl -fsSL https://padremote.com/install.sh | sh` one-liner plus a `.deb`/AppImage, matching Ollama-style expectations.
+- **Windows and Linux:** not supported yet. Installers for them (a signed `.msi`; an `install.sh` one-liner with a `.deb`/AppImage) wait on a port that has run on real hardware — see `docs/dev/porting.md`.
 
 **One unavoidable extra step vs Ollama:** because the app controls the cursor, macOS requires the user to grant **Accessibility** permission (Ollama never asks, because it doesn't touch input). This cannot be removed — the OS owns it — but it must be made painless:
 - On first launch, detect the missing permission and show a single, clear screen: one sentence of explanation + a button that deep-links straight to System Settings → Privacy & Security → Accessibility (`x-apple.systempreferences:...`).
 - Detect the moment permission is granted and proceed automatically; no restart if avoidable.
 - Never inject events silently before permission exists; show the guidance instead.
-- (Windows: no prompt needed for `SendInput`. Linux: if using `uinput`, detect missing `input`-group membership and print the exact one-line fix.)
 
 Acceptance for install: a non-technical user gets from "download" to "cursor moves from my phone" without reading documentation, with the only friction being the single OS permission tap on macOS.
 
@@ -318,11 +316,11 @@ Acceptance for install: a non-technical user gets from "download" to "cursor mov
 | # | Milestone | Deliverable | Done when |
 |---|-----------|-------------|-----------|
 | 0 | Injection core | `tools/proto` (Python): localhost touch page → cursor | Move, click, right-click, drag, pixel-scroll and a zoom backend all work from a `ws://localhost` touch page on one machine; timings/curve recorded in `config.json`. No HTTPS, no phone yet. |
-| 1 | Rust recognizer + injection | Rust app: full gesture engine + `enigo`/per-OS injection, fed by a local fake client | Recognizer unit tests pass on recorded touch streams; all v1 gestures fire from replay; runs as a tray app |
+| 1 | Rust recognizer + injection | Rust app: full gesture engine + macOS (CGEvent) injection, fed by a local fake client | Recognizer unit tests pass on recorded touch streams; all v1 gestures fire from replay; runs as a tray app |
 | 2 | Touch page + local link | `web/` surface page connecting to the Rust app over `wss://` on the LAN | End-to-end control on a real phone over local Wi‑Fi: cursor + tap + scroll feel right; < 50 ms touch-to-cursor |
 | 3 | QR pairing + reconnect | QR carries LAN address + secret; TLS + HMAC auth; auto-reconnect | Fresh phone: scan QR → trackpad works in < 15 s. Reopen next day → connects silently. Wi‑Fi toggle → reconnects < 3 s. IP-change fallback works. |
 | 4 | Full gesture polish | Zoom disambiguation, drag variants, momentum scroll, settings sheet, hot-reload config | All v1 gestures reliable; sensitivity + natural-scroll adjustable live |
-| 5 | Ship (Ollama-grade install) | Signed/notarized `.dmg` (+ `.msi`/install.sh scaffolding), guided first-run permission, PWA install, deploy static page | A non-technical user goes download → cursor-from-phone with no docs, only the single macOS permission tap |
+| 5 | Ship (Ollama-grade install) | Signed/notarized `.dmg`, guided first-run permission, PWA install, deploy static page | A non-technical user goes download → cursor-from-phone with no docs, only the single macOS permission tap |
 
 ## 14. Acceptance criteria (v1)
 
@@ -368,5 +366,5 @@ Point the page at the desktop app via `.env.local` (`VITE_DESKTOP_WSS=wss://myco
 - Keyboard: a text field on the phone that sends keystrokes to the computer.
 - Cross-network use: add WebRTC + a signaling service (and a TURN relay for strict networks) so the phone can control the computer over the internet, not just the same Wi‑Fi. This is the main thing v1 gives up by using a plain local WebSocket.
 - Fully offline distribution: the desktop app serves the page itself over its self-signed HTTPS, so there is no hosted page at all; the phone trusts the cert once. Removes the last internet dependency (first page load).
-- Windows and Linux desktop apps: reuse the phone page, protocol, pairing and the entire gesture recognizer unchanged; implement a new injection backend only. Windows: `SendInput` for move/click/scroll and wheel, app-zoom via Ctrl+scroll or `keybd_event` Ctrl+/−. Linux: `uinput` (Wayland-friendly) or `XTEST`/`xdotool` on X11. Zoom faces the same "no universal magnify event" limitation as macOS and uses the app-zoom fallback. The `gesture/` engine and `config.json` are shared across all three platforms; only `input/` differs. (`enigo` already covers much of this, so these are mostly packaging + permission work.)
+- Windows and Linux desktop apps (not supported today; an unproven `enigo` backend was written, never run on real hardware, and removed — see `docs/dev/porting.md`): reuse the phone page, protocol, pairing and the entire gesture recognizer unchanged; implement a new injection backend only. Windows: `SendInput` for move/click/scroll and wheel, app-zoom via Ctrl+scroll or `keybd_event` Ctrl+/−. Linux: `uinput` (Wayland-friendly) or `XTEST`/`xdotool` on X11. Zoom faces the same "no universal magnify event" limitation as macOS and uses the app-zoom fallback. The `gesture/` engine and `config.json` are shared across all three platforms; only `input/` differs. (`enigo` already covers much of this, so these are mostly packaging + permission work.)
 - Optional native phone app for background operation and haptics on iOS, speaking the same protocol.

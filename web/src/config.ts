@@ -36,9 +36,7 @@ import {
   isPaired,
   claimedFields,
   gestureSections,
-  forOs,
   type Gesture,
-  type Os,
 } from "./gestures";
 import { gesturePad } from "./gesturepad";
 import { authReply, socketUrl, storedLink, takeKeyFromFragment } from "./pairing";
@@ -63,8 +61,6 @@ interface HostRow {
 interface State {
   t: "config";
   computer: string;
-  /** Which system the desktop runs, so functions can be named as it names them. */
-  os?: Os;
   path: string | null;
   file: Config;
   effective: Config;
@@ -820,11 +816,6 @@ $("follow").addEventListener("change", (e) => {
 
 let current: Gesture = GESTURES[0];
 
-/** The wording for this computer; macOS phrasing until the desktop says. */
-function os(): Os {
-  return state?.os ?? "macos";
-}
-
 function buildGestures(): void {
   const list = $("gesture-list");
   const select = $("gesture-select") as HTMLSelectElement;
@@ -947,14 +938,13 @@ function shownValue(s: State, field: string, locked: boolean): string {
 function syncGesture(): void {
   if (!state) return;
   const g = current;
-  const system = os();
   const actions = $("gesture-actions");
   const fixed = $("gesture-fixed");
   const locked = $("gesture-locked");
 
-  $("gesture-name").textContent = forOs(g.name, system);
+  $("gesture-name").textContent = g.name;
   const resolved = g.field ? gestureAction(state, g) : "";
-  $("gesture-assignment").textContent = g.field ? `Assigned: ${actionName(resolved, system, false)}` : "";
+  $("gesture-assignment").textContent = g.field ? `Assigned: ${actionName(resolved, false)}` : "";
 
   if (!g.field) {
     actions.hidden = true;
@@ -971,7 +961,7 @@ function syncGesture(): void {
     // Both cases lock the control: while a gesture is showing what the computer
     // says, the honest thing is a control you cannot move, not one that accepts
     // a choice. See the note on `seededBy` for why the *escape* differs.
-    renderActions(g.field, state.vocabulary[g.field] ?? [value], value, system, fromHost, isPaired(g));
+    renderActions(g.field, state.vocabulary[g.field] ?? [value], value, fromHost, isPaired(g));
     locked.hidden = !fromHost;
     locked.classList.toggle("seeded", by === null && seeded !== null);
     locked.textContent = by
@@ -995,18 +985,17 @@ function syncGesture(): void {
   // do again?" does not need a tap per row to answer.
   for (const button of $("gesture-list").querySelectorAll<HTMLElement>("[data-name]")) {
     const gesture = GESTURES.find((x) => x.id === button.dataset.name)!;
-    button.textContent = forOs(gesture.name, system);
+    button.textContent = gesture.name;
   }
   for (const option of ($("gesture-select") as HTMLSelectElement).querySelectorAll<HTMLElement>("[data-name]")) {
     const gesture = GESTURES.find((x) => x.id === option.dataset.name)!;
-    option.textContent = forOs(gesture.name, system);
+    option.textContent = gesture.name;
   }
   for (const small of $("gesture-list").querySelectorAll<HTMLElement>("[data-does]")) {
     const gesture = GESTURES.find((x) => x.id === small.dataset.does)!;
     small.textContent = gesture.field
       ? actionName(
           gestureAction(state!, gesture),
-          system,
           isPaired(gesture),
         )
       : (gesture.fixed ?? "");
@@ -1024,7 +1013,6 @@ function renderActions(
   field: string,
   options: string[],
   value: string,
-  system: Os,
   disabled: boolean,
   paired: boolean,
 ): void {
@@ -1032,7 +1020,7 @@ function renderActions(
   // A value the engine no longer accepts must still be visible rather than
   // silently reading as whatever happens to be first in the list.
   const wanted = options.includes(value) ? options : [value, ...options];
-  const groups = groupActions(wanted, system, paired);
+  const groups = groupActions(wanted, paired);
   const shape = `${field}|${groups.map((g) => `${g.title}:${g.actions.join(",")}`).join("|")}`;
 
   if (box.dataset.shape !== shape) {
@@ -1081,13 +1069,13 @@ function renderActions(
       // by a separator is half again as wide as this column, and wrapped where
       // the words happened to run out. So the answer goes underneath, which is
       // the shape every other two-part control on this page already has.
-      child.textContent = actionName("inherit", system, false);
+      child.textContent = actionName("inherit", false);
       const now = document.createElement("small");
       now.className = "choice-now block text-[13px] font-normal text-muted";
-      now.textContent = actionName(gestureAction(state!, current, true), system, false);
+      now.textContent = actionName(gestureAction(state!, current, true), false);
       child.append(now);
     } else {
-      child.textContent = actionName(child.dataset.action!, system, paired);
+      child.textContent = actionName(child.dataset.action!, paired);
     }
     child.setAttribute("aria-checked", String(child.dataset.action === value));
     child.disabled = disabled;

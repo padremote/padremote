@@ -289,8 +289,7 @@ impl Default for Bindings {
 }
 
 impl Config {
-    /// `~/Library/Application Support/PadRemote/config.json` on macOS,
-    /// the platform equivalent elsewhere.
+    /// `~/Library/Application Support/PadRemote/config.json`.
     pub fn user_path() -> Option<PathBuf> {
         Some(dirs::config_dir()?.join("PadRemote").join("config.json"))
     }
@@ -360,13 +359,6 @@ impl Config {
         // What a tap can do: the clicks, plus every action that means something
         // on its own. A swipe binds a *pair* - louder and quieter, back and
         // forward - and half of a pair is not something one tap can express.
-        //
-        // Per system, because the actions are not the same everywhere. macOS
-        // has Mission Control *and* App Expose; Windows and Linux have one
-        // overview, and offering both there listed the same keystroke twice
-        // under two names. GNOME's overview is also its search, so Spotlight
-        // has no separate meaning on Linux.
-        #[cfg(target_os = "macos")]
         const CLICKS: &[&str] = &[
             "none",
             "leftClick",
@@ -378,61 +370,6 @@ impl Config {
             "launchpad",
             "switchApps",
             "spotlight",
-            "screenshot",
-            "lockScreen",
-            "mute",
-            "smartZoom",
-            "copy",
-            "cut",
-            "paste",
-            "selectAll",
-            "save",
-            "find",
-            "newTab",
-            "closeWindow",
-            "minimiseWindow",
-            "quitApp",
-            "fullScreen",
-            "calculator",
-        ];
-        #[cfg(target_os = "windows")]
-        const CLICKS: &[&str] = &[
-            "none",
-            "leftClick",
-            "rightClick",
-            "middleClick",
-            "missionControl",
-            "showDesktop",
-            "launchpad",
-            "switchApps",
-            "spotlight",
-            "screenshot",
-            "lockScreen",
-            "mute",
-            "smartZoom",
-            "copy",
-            "cut",
-            "paste",
-            "selectAll",
-            "save",
-            "find",
-            "newTab",
-            "closeWindow",
-            "minimiseWindow",
-            "quitApp",
-            "fullScreen",
-            "calculator",
-        ];
-        #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-        const CLICKS: &[&str] = &[
-            "none",
-            "leftClick",
-            "rightClick",
-            "middleClick",
-            "missionControl",
-            "showDesktop",
-            "launchpad",
-            "switchApps",
             "screenshot",
             "lockScreen",
             "mute",
@@ -457,7 +394,6 @@ impl Config {
         // silently did nothing - and made it offer combinations macOS itself
         // never offers, which is the more confusing half.
         const ACROSS: &[&str] = &["none", "spaces", "navigate", "tabs", "undoRedo"];
-        #[cfg(target_os = "macos")]
         const UP_DOWN: &[&str] = &[
             "none",
             "missionControl",
@@ -466,9 +402,6 @@ impl Config {
             "brightness",
             "zoom",
         ];
-        // One overview, so no separate App Expose to bind the other way.
-        #[cfg(not(target_os = "macos"))]
-        const UP_DOWN: &[&str] = &["none", "missionControl", "volume", "zoom"];
         const DIRECTIONAL: &[&str] = &[
             "inherit",
             "none",
@@ -483,11 +416,7 @@ impl Config {
             "volumeUp",
             "volumeDown",
             "mute",
-            // Brightness is a media key, and only macOS has one it will answer
-            // - so only macOS is offered it. See `input/portable.rs`.
-            #[cfg(target_os = "macos")]
             "brightnessUp",
-            #[cfg(target_os = "macos")]
             "brightnessDown",
             "zoomIn",
             "zoomOut",
@@ -499,7 +428,6 @@ impl Config {
             "paste",
             "screenshot",
             "lockScreen",
-            #[cfg(target_os = "macos")]
             "appWindows",
         ];
         vec![

@@ -19,6 +19,20 @@ use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
 fn main() {
+    // PadRemote supports macOS only. Linux and Windows are not supported yet:
+    // the input backend, the trackpad-settings reader, the menu bar and the
+    // network probes are all macOS calls, and the unproven code that once
+    // stood in for them elsewhere was removed rather than left to rot. Saying
+    // so here, first, is kinder than the page of unresolved imports a build on
+    // another system would otherwise end in. See docs/dev/porting.md.
+    let target = std::env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
+    if target != "macos" {
+        panic!(
+            "PadRemote supports macOS only; building for `{target}` is not supported. \
+             Linux and Windows are not supported yet - see docs/dev/porting.md."
+        );
+    }
+
     let dist = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../web/dist");
     println!("cargo:rerun-if-changed=build.rs");
     // The directory itself, so that *creating* it after a build without one

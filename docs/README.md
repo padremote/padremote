@@ -3,6 +3,9 @@
 Turn your phone's touchscreen into a wireless trackpad for your Mac. The
 computer runs a small app; the phone just opens a web page.
 
+**PadRemote supports macOS only** (macOS 13 or later). Linux and Windows are not
+supported yet.
+
 ## Using it
 
 | | |
@@ -30,7 +33,7 @@ computer runs a small app; the phone just opens a web page.
 | [**Protocol**](dev/protocol.md) | The wire format between phone and desktop |
 | [**Threat model**](dev/threat-model.md) | What it defends against, what it doesn't, and where each check is |
 | [**Gotchas**](dev/gotchas.md) | **Read before touching input injection.** Every trap that has already cost a day |
-| [**Porting**](dev/porting.md) | What Windows and Linux would need |
+| [**Platform support**](dev/porting.md) | macOS only — why, and what Linux or Windows would take |
 
 ## Where things stand
 
@@ -41,10 +44,11 @@ several phones or tablets connected at once, and a settings page that replaced
 hand-editing JSON. The desktop app serves the phone page itself, so the whole
 product is one process and one install command.
 
-**Written but never run on real hardware.** The Windows and Linux halves — an
-`enigo`-backed input backend and the Precision Touchpad / GNOME / KDE settings
-readers. They compile and their mappings are unit-tested; nobody has tried them
-on the machines they are for. See [porting](dev/porting.md).
+**macOS only.** Linux and Windows are not supported yet, and the app does not
+build for them. The unproven `enigo` backend and Windows/Linux settings readers
+that used to sit beside the macOS code were removed rather than kept looking
+like a feature; [platform support](dev/porting.md) says what a real port would
+take.
 
 **Not yet.** TLS — the link is plain `ws://`, so someone already positioned to
 read your Wi-Fi can read the touch stream, though they cannot open a session of

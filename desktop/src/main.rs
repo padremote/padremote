@@ -151,7 +151,6 @@ fn main() -> Result<()> {
     spawn_server(&runtime, listener, shared.clone());
     report_page_source(&args);
 
-    #[cfg(target_os = "macos")]
     if awaiting_permission {
         app::spawn_permission_watch(&runtime, shared.clone());
     }
@@ -168,7 +167,6 @@ fn main() -> Result<()> {
         }
     }
 
-    #[cfg(target_os = "macos")]
     if !args.headless {
         // Never returns; quitting from the menu exits the process.
         padremote::tray::run(status, shared.clone(), args.page_port(), args.port);
@@ -274,7 +272,6 @@ fn load_config() -> (Config, Option<PathBuf>) {
         // The full table, so "does it mirror my trackpad?" is answerable without
         // having to ask anyone.
         print!("{}", padremote::sysprefs::text_report(&host.report()));
-        #[cfg(target_os = "macos")]
         if !padremote::sysprefs::macos::space_shortcuts_enabled()
             && cfg.bindings.four_finger_horiz_swipe != "none"
         {
@@ -328,7 +325,6 @@ fn port_in_use(e: std::io::Error, port: u16) -> anyhow::Error {
     e.into()
 }
 
-#[cfg(target_os = "macos")]
 fn make_injector() -> Result<Box<dyn Injector>> {
     use padremote::input::{permission_help, request_accessibility, PlatformInjector};
     // Asking with the prompt shows macOS's own dialog, which has a button
@@ -340,11 +336,4 @@ fn make_injector() -> Result<Box<dyn Injector>> {
         anyhow::bail!("Accessibility permission is not granted");
     }
     Ok(Box::new(PlatformInjector::new()?))
-}
-
-#[cfg(not(target_os = "macos"))]
-fn make_injector() -> Result<Box<dyn Injector>> {
-    // Windows (SendInput) and Linux (uinput/XTEST) backends land with the
-    // cross-platform work in plan.md section 16.
-    anyhow::bail!("no input backend for this platform yet; run with --dry-run")
 }

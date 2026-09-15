@@ -5,17 +5,11 @@
 //! module reads the host's real configuration and folds it onto [`Config`].
 //!
 //! Reading and mapping are kept apart on purpose: [`HostTrackpad`] is plain
-//! data, so the mapping is unit-testable without touching the real system, and
-//! a future Windows or Linux reader only has to produce the same struct.
+//! data, so the mapping is unit-testable without touching the real system.
+//! The only reader is `macos`, because macOS is the only system PadRemote
+//! supports.
 
-#[cfg(target_os = "macos")]
 pub mod macos;
-// Compiled everywhere, not only on their own platform: each holds a *pure*
-// mapping from that OS's raw settings onto `HostTrackpad`, and a mapping that
-// can only be compiled on the machine it targets is one nobody can test. Only
-// the `read()` inside each is platform-gated.
-pub mod linux;
-pub mod windows;
 
 use crate::gesture::Config;
 
@@ -79,27 +73,9 @@ pub struct HostTrackpad {
 }
 
 impl HostTrackpad {
-    /// Read the host. Returns an empty reading on platforms with no support,
-    /// which leaves every PadRemote default untouched.
+    /// Read the host's trackpad preferences.
     pub fn read() -> Self {
-        #[cfg(target_os = "macos")]
-        {
-            macos::read()
-        }
-        #[cfg(target_os = "windows")]
-        {
-            windows::read()
-        }
-        #[cfg(all(unix, not(target_os = "macos")))]
-        {
-            linux::read()
-        }
-        // Anything else - and there is nothing else this app runs on today -
-        // reports nothing, which leaves every PadRemote default untouched.
-        #[cfg(not(any(target_os = "macos", target_os = "windows", unix)))]
-        {
-            Self::default()
-        }
+        macos::read()
     }
 
     /// True when the host told us nothing at all.
@@ -319,180 +295,130 @@ impl HostTrackpad {
         };
 
         use Status::*;
-        // The report answers "does this match my trackpad?", and a macOS
-        // preference key is no answer at all on Windows. `cfg!` rather than a
-        // runtime flag: the report is always about the machine it runs on.
-        let key = |macos: &str, windows: &str, linux: &str| -> String {
-            if cfg!(target_os = "macos") {
-                macos
-            } else if cfg!(target_os = "windows") {
-                windows
-            } else {
-                linux
-            }
-            .to_string()
-        };
         flag(
             "Scrolling direction: Natural",
-            &key(
-                "com.apple.swipescrolldirection",
-                "ScrollDirection",
-                "natural-scroll",
-            ),
+            "com.apple.swipescrolldirection",
             self.natural_scroll,
             Mirrored,
         );
         flag(
             "Use trackpad for scrolling",
-            &key(
-                "TrackpadScroll",
-                "PanEnabled",
-                "two-finger-scrolling-enabled",
-            ),
+            "TrackpadScroll",
             self.scrolling,
             Mirrored,
         );
         flag(
             "Use inertia when scrolling",
-            &key("TrackpadMomentumScroll", "-", "-"),
+            "TrackpadMomentumScroll",
             self.momentum_scroll,
             Mirrored,
         );
         flag(
             "Scroll horizontally",
-            &key("TrackpadHorizScroll", "-", "-"),
+            "TrackpadHorizScroll",
             self.horizontal_scroll,
             Mirrored,
         );
-        flag(
-            "Tap to click",
-            &key("Clicking", "TapsEnabled", "tap-to-click"),
-            self.tap_to_click,
-            Mirrored,
-        );
+        flag("Tap to click", "Clicking", self.tap_to_click, Mirrored);
         flag(
             "Secondary click (two fingers)",
-            &key(
-                "TrackpadRightClick",
-                "TwoFingerTapEnabled",
-                "click-method=fingers",
-            ),
+            "TrackpadRightClick",
             self.secondary_click,
             Mirrored,
         );
         flag(
             "Secondary click (corner)",
-            &key("TrackpadCornerSecondaryClick", "-", "click-method=areas"),
+            "TrackpadCornerSecondaryClick",
             self.corner_secondary_click,
             Mirrored,
         );
         flag(
             "Three finger tap",
-            &key(
-                "TrackpadThreeFingerTapGesture",
-                "ThreeFingerTapEnabled",
-                "-",
-            ),
+            "TrackpadThreeFingerTapGesture",
             self.three_finger_tap,
             Mirrored,
         );
         flag(
             "Smart zoom (two-finger double tap)",
-            &key("TrackpadTwoFingerDoubleTapGesture", "-", "-"),
+            "TrackpadTwoFingerDoubleTapGesture",
             self.two_finger_double_tap,
             Approximated("macOS has no public smart-zoom event; sent as app zoom"),
         );
         flag(
             "Three finger drag",
-            &key("TrackpadThreeFingerDrag", "-", "-"),
+            "TrackpadThreeFingerDrag",
             self.three_finger_drag,
             NotPossible("three fingers are kept for the swipes; press and hold to drag"),
         );
         flag(
             "Dragging style: without drag lock",
-            &key("Dragging", "-", "-"),
+            "Dragging",
             self.dragging,
             Mirrored,
         );
         flag(
             "Zoom in or out (pinch)",
-            &key("TrackpadPinch", "ZoomEnabled", "-"),
+            "TrackpadPinch",
             self.pinch_zoom,
             Approximated("no public magnify event; sent as Cmd +/-"),
         );
         flag(
             "Rotate",
-            &key("TrackpadRotate", "-", "-"),
+            "TrackpadRotate",
             self.rotate,
             NotPossible("macOS exposes no way to synthesize a rotation gesture"),
         );
         flag(
             "Swipe between pages (two fingers)",
-            &key("AppleEnableSwipeNavigateWithScrolls", "-", "-"),
+            "AppleEnableSwipeNavigateWithScrolls",
             self.swipe_navigate,
             Mirrored,
         );
         flag(
             "Swipe between pages (three fingers)",
-            &key(
-                "TrackpadThreeFingerHorizSwipeGesture",
-                "ThreeFingerSlideEnabled",
-                "-",
-            ),
+            "TrackpadThreeFingerHorizSwipeGesture",
             self.three_finger_horiz_swipe,
             Mirrored,
         );
         flag(
             "Mission Control (three fingers)",
-            &key(
-                "TrackpadThreeFingerVertSwipeGesture",
-                "ThreeFingerSlideEnabled",
-                "-",
-            ),
+            "TrackpadThreeFingerVertSwipeGesture",
             self.three_finger_vert_swipe,
             Mirrored,
         );
         flag(
             "Swipe between full-screen apps",
-            &key(
-                "TrackpadFourFingerHorizSwipeGesture",
-                "FourFingerSlideEnabled",
-                "-",
-            ),
+            "TrackpadFourFingerHorizSwipeGesture",
             self.four_finger_horiz_swipe,
             Mirrored,
         );
         flag(
             "Mission Control (four fingers)",
-            &key(
-                "TrackpadFourFingerVertSwipeGesture",
-                "FourFingerSlideEnabled",
-                "-",
-            ),
+            "TrackpadFourFingerVertSwipeGesture",
             self.four_finger_vert_swipe,
             Mirrored,
         );
         flag(
             "Launchpad (four-finger pinch)",
-            &key("TrackpadFourFingerPinchGesture", "-", "-"),
+            "TrackpadFourFingerPinchGesture",
             self.four_finger_pinch,
             Mirrored,
         );
         flag(
             "Show Desktop (five-finger spread)",
-            &key("TrackpadFiveFingerPinchGesture", "-", "-"),
+            "TrackpadFiveFingerPinchGesture",
             self.five_finger_spread,
             Mirrored,
         );
         flag(
             "Force Click",
-            &key("com.apple.trackpad.forceClick", "-", "-"),
+            "com.apple.trackpad.forceClick",
             self.force_click,
             NotPossible("a phone screen has no pressure sensor"),
         );
         flag(
             "Spring-loading",
-            &key("com.apple.springing.enabled", "-", "-"),
+            "com.apple.springing.enabled",
             self.springing,
             Automatic("the OS springs folders open from the real drag events we send"),
         );

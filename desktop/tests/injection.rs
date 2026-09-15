@@ -10,8 +10,6 @@
 //!
 //! Every effect it causes is undone before it returns.
 
-#![cfg(target_os = "macos")]
-
 use padremote::gesture::{Button, ScrollPhase, Shortcut};
 use padremote::input::{accessibility_trusted, Injector, MacInjector};
 

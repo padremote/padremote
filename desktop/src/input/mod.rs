@@ -1,13 +1,10 @@
 //! Input injection: turning `InputAction`s into real OS input events.
 //!
-//! This is the ONLY platform-specific part of the app (plan.md section 16).
-//! The gesture engine, the protocol, the config and the pairing flow are all
-//! shared; a new platform implements this trait and nothing else.
-//!
-//! Windows will back this with `SendInput` and Linux with `uinput`/`XTEST`,
-//! both reachable through `enigo`; macOS talks to CGEvent directly because it
-//! needs pixel-precise scrolling and explicit click state, which the portable
-//! layer does not expose.
+//! macOS is the only backend. It talks to CGEvent directly, because a trackpad
+//! needs pixel-precise scrolling with gesture phases and explicit click state,
+//! and no portable input layer exposes either. The gesture engine, the
+//! protocol, the config and the pairing flow never see anything below this
+//! trait, which is what keeps them testable without a Mac.
 
 use crate::gesture::{Button, InputAction, ScrollPhase, Shortcut};
 
@@ -90,63 +87,10 @@ impl Blocked {
     }
 }
 
-#[cfg(target_os = "macos")]
 pub mod macos;
-#[cfg(not(target_os = "macos"))]
-pub mod portable;
 
-#[cfg(target_os = "macos")]
 pub use macos::MacInjector as PlatformInjector;
-#[cfg(target_os = "macos")]
 pub use macos::{accessibility_trusted, permission_help, request_accessibility, MacInjector};
-
-#[cfg(not(target_os = "macos"))]
-pub use portable::PortableInjector as PlatformInjector;
-
-/// Whether we are allowed to inject input at all.
-///
-/// macOS gates this behind an Accessibility grant and silently discards every
-/// event until it is given, which is why the whole app is built around asking.
-/// Windows needs nothing. Linux needs write access to `/dev/uinput`, which is a
-/// file permission rather than a prompt - and one this cannot usefully test in
-/// advance, because the failure only appears when the device is opened. So both
-/// answer "yes, try it", and a real failure surfaces where it happens.
-#[cfg(not(target_os = "macos"))]
-pub fn accessibility_trusted() -> bool {
-    true
-}
-
-#[cfg(not(target_os = "macos"))]
-pub fn request_accessibility() -> bool {
-    true
-}
-
-/// What to tell a user whose input is going nowhere.
-///
-/// Every platform gets an answer, because "no input backend" with no
-/// explanation is the single least useful thing this app can say.
-#[cfg(target_os = "windows")]
-pub fn permission_help() -> String {
-    "\nPadRemote could not open an input device.\n\
-     \x20 Windows needs no permission for this, so the usual cause is another\n\
-     \x20 program holding exclusive input, or PadRemote running with less\n\
-     \x20 privilege than the window you are trying to control - a window run as\n\
-     \x20 administrator ignores input from a program that is not.\n"
-        .to_string()
-}
-
-#[cfg(all(not(target_os = "macos"), not(target_os = "windows")))]
-pub fn permission_help() -> String {
-    "\nPadRemote could not open an input device.\n\
-     \x20 On Linux it writes through /dev/uinput, which usually means joining\n\
-     \x20 the input group:\n\
-     \x20\n\
-     \x20   sudo usermod -aG input $USER\n\
-     \x20\n\
-     \x20 Then log out and back in - group membership is picked up at login.\n\
-     \x20 On Wayland, X11-only fallbacks will not work at all; uinput does.\n"
-        .to_string()
-}
 
 /// A backend that swallows everything, for tests and `--dry-run`.
 ///

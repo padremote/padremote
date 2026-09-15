@@ -49,8 +49,7 @@ who drives the cursor · `session.rs` one phone's conversation · `settings.rs`
 config in and out · `devices.rs` the connect page's live half · `observe.rs` the
 read-only debug feed · `status.rs` what the menu bar reads.
 
-**Desktop `input/`** — `macos.rs` CGEvent, pixel scroll, click state ·
-`portable.rs` enigo, for Windows and Linux (unproven).
+**Desktop `input/`** — `macos.rs` CGEvent, pixel scroll, click state.
 
 </details>
 
@@ -66,15 +65,15 @@ else is a browser asking for a file.
 
 ## The layering rule
 
-Two modules are platform-specific — `input/` and `sysprefs/` — and **nothing
-else may be**. In particular `gesture/` must stay pure: no I/O, no clock of its
+PadRemote supports macOS only. Two modules hold its input and settings code —
+`input/` and `sysprefs/` — and **nothing else may reach into the OS for those**. In particular `gesture/` must stay pure: no I/O, no clock of its
 own, no platform calls. Every decision is a function of the samples fed in and
 the timestamps they carry.
 
 That purity buys three things:
 
 - The engine is testable from recorded touch streams, with no phone and no Mac.
-- Windows and Linux reuse it untouched ([porting](porting.md)).
+- A future port to Linux or Windows would reuse it untouched ([platform support](porting.md)).
 - Gesture bugs are reproducible: a fixture either fires or it doesn't.
 
 If you find yourself wanting to read a preference or post an event from
@@ -136,7 +135,7 @@ The start of a gesture is also the moment `Shared::drive` calls
 change hands: nothing is in flight to disturb. The other hand that might have
 moved the cursor is not another phone at all but the computer's own trackpad,
 which no device on this diagram hears about — see
-[porting](porting.md#the-injector-trait) for which backends have to care.
+[platform support](porting.md#the-injector-trait) for which backends have to care.
 
 Per-device recognizers are the other half. One shared recognizer meant two
 phones interleaved their finger ids into a single state machine, so a tap on the

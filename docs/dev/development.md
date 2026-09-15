@@ -2,8 +2,9 @@
 
 ## Requirements
 
-Rust (stable), Node 18+, macOS 13+. Python 3 only for the retired prototype and
-the icon generator.
+macOS 13+ — the only system PadRemote builds on or supports; Linux and Windows
+are not supported yet ([platform support](porting.md)). Rust (stable), Node 18+.
+Python 3 only for the retired prototype and the icon generator.
 
 ## Layout
 
@@ -13,13 +14,10 @@ desktop/                  the Rust app
   src/cli.rs              flags and --help
   src/app.rs              the loops that run for the life of the process
   src/gesture/            touch → intent. Pure, OS-agnostic
-  src/input/              intent → OS events. Only platform code
+  src/input/              intent → OS events
     macos.rs              CGEvent
-    portable.rs           enigo, for Windows and Linux (unproven)
   src/sysprefs/           reads the host's trackpad settings
     macos.rs              CFPreferences
-    windows.rs            the Precision Touchpad registry keys (unproven)
-    linux.rs              GNOME gsettings, KDE kcminputrc (unproven)
   src/net/                WebSocket server
     shared.rs             the devices, and which one drives the cursor
     session.rs            one phone's conversation
@@ -165,7 +163,6 @@ and it restores the cursor position before returning.
 | `web/scripts/check-settings.mjs` | The settings page against a DOM stub: which page a control lands on, the hub's live subtitles, gesture assignment and inheritance, host-decided controls, and the paired-device list |
 | `web/scripts/check-mobile-ui.mjs` | The touch controls and the delayed viewport: the real modules against a small event and geometry host, so a phone-only layout bug can fail on a laptop |
 | `web/scripts/check-connect.mjs` | The connect page, which nothing else covers - it is served by the app, so it is neither typechecked nor built. Runs the real inline script out of `desktop/src/assets/connect.html` |
-| `src/sysprefs/windows.rs`, `linux.rs` | The Windows and Linux mappings, from recorded raw values - testable because the reading and the mapping are separate |
 
 ### Writing gesture tests
 
@@ -281,8 +278,6 @@ cargo fmt --check
 cargo clippy --all-targets -- -D warnings   # clean, and kept that way
 cargo test
 cargo build --release
-# The unproven halves still have to compile.
-cargo check --target x86_64-pc-windows-msvc --all-targets
 
 cd ../web
 npm run check                                # types, ring, intro, crypto vectors
@@ -300,6 +295,5 @@ cd desktop && cargo deny check               # advisories, licences, crate sourc
 `cargo deny` needs `cargo install --locked cargo-deny` once; CI uses the action
 instead. Everything else runs with what the project already needs.
 
-CI runs the Rust half on macOS: the input backend, the trackpad mirroring and
-the tray are macOS-only, so a Linux runner would happily green-light a stub of
-the app nobody ships.
+CI runs the Rust half on macOS because that is the only system it builds for:
+`build.rs` refuses every other target.

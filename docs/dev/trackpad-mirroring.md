@@ -24,7 +24,8 @@ Reading and mapping are separate on purpose:
 
 - `HostTrackpad` is plain `Option`-typed data, so the mapping is unit-testable
   without touching the real system.
-- A future Windows or Linux reader only has to produce the same struct.
+- macOS is the only reader, because it is the only system PadRemote supports.
+  A reader for Linux or Windows would only have to produce the same struct.
 - `None` means "the OS didn't tell us", which must leave PadRemote's own default
   alone rather than forcing it off.
 

@@ -64,18 +64,6 @@ fn state(shared: &Arc<Shared>) -> String {
     serde_json::json!({
         "t": "config",
         "computer": shared.host_name,
-        // Which system this is, so the settings page can name gestures the way
-        // this computer's own trackpad preferences name them. A Mac user is
-        // configuring "Mission Control"; the same binding on Windows is Task
-        // View, and a page that says the wrong one is describing someone else's
-        // machine.
-        "os": if cfg!(target_os = "macos") {
-            "macos"
-        } else if cfg!(target_os = "windows") {
-            "windows"
-        } else {
-            "linux"
-        },
         "path": shared.config_path().map(|p| p.display().to_string()),
         // What the user has chosen, and what the page edits.
         "file": file,

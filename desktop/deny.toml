@@ -23,7 +23,7 @@ version = 2
 yanked = "deny"
 # Only our *own* dependencies have to be maintained crates. Set to "all", this
 # fails on nine RUSTSEC advisories for the GTK3 bindings that `tray-icon` pulls
-# in for Linux - a platform this app does not ship, through a crate we do not
+# in for Linux - a platform this app does not support, through a crate we do not
 # choose, for a reason ("no longer maintained") that no change here can fix.
 # A check that cannot pass is a check that gets turned off, and turning this one
 # off would also silence the vulnerabilities. Those are always errors, at any

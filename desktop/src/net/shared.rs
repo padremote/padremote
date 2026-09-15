@@ -125,7 +125,6 @@ pub struct DeviceRow {
 /// The text includes a device's self-chosen name, which came off the network.
 /// Pasting that into a script unescaped is how a device name becomes a command
 /// on this machine, so the quoting is not cosmetic.
-#[cfg(target_os = "macos")]
 fn applescript_string(text: &str) -> String {
     let mut out = String::with_capacity(text.len() + 2);
     out.push('"');
@@ -361,7 +360,6 @@ impl Shared {
     /// the computer they are not looking at would be dismissed unread by the
     /// next person to touch the keyboard.
     pub fn announce_new_device(&self, what: &str) {
-        #[cfg(target_os = "macos")]
         {
             // Through `osascript` rather than a notification framework: the app
             // needs no new dependency, no entitlement and no bundle identity to
@@ -392,8 +390,6 @@ impl Shared {
                 Err(e) => tracing::debug!("could not announce the new device: {e}"),
             }
         }
-        #[cfg(not(target_os = "macos"))]
-        let _ = what;
     }
 
     /// Revoke one device for good, and drop it if it is connected.

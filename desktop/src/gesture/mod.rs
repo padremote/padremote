@@ -2,8 +2,9 @@
 //!
 //! Pure and deterministic. No I/O, no platform calls, no clock of its own -
 //! every decision is a function of the samples fed in and the timestamps they
-//! carry. That is what makes it testable from recorded streams and what lets
-//! Windows and Linux reuse it untouched (section 16).
+//! carry. That is what makes it testable from recorded streams, with no phone
+//! and no Mac - and what would let a port to another system, should PadRemote
+//! ever support one, reuse it untouched (docs/dev/porting.md).
 //!
 //! State machine (section 9.8):
 //!
@@ -168,7 +169,7 @@ impl ScrollPhase {
 /// A whole-desktop action a multi-finger swipe asks for.
 ///
 /// Semantic rather than a keystroke: the engine says what the user meant, and
-/// each platform's injector decides how to produce it.
+/// the injector decides which keystroke or event produces it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Shortcut {
     /// Move one space/desktop to the left.
@@ -188,8 +189,7 @@ pub enum Shortcut {
     VolumeUp,
     VolumeDown,
     Mute,
-    /// Display brightness. macOS only: it is a media key there, and neither
-    /// Windows nor Linux has a keystroke that any machine reliably answers.
+    /// Display brightness, sent as the media key macOS answers.
     BrightnessUp,
     BrightnessDown,
     /// Application zoom, as a pair a swipe can drive.
@@ -1546,15 +1546,10 @@ mod vocabulary_tests {
         }
     }
 
-    /// Two names for one keystroke is not two actions.
-    ///
-    /// macOS has Mission Control *and* App Expose, and separate keystrokes for
-    /// them. Windows and Linux have a single overview, and the injector sends
-    /// the same chord for both - so offering both there listed one action twice
-    /// under two names, which reads as a bug in the app rather than a fact
-    /// about the system.
+    /// Mission Control and App Expose are two actions on a Mac, with two
+    /// keystrokes, and both have to be offered - on a tap and on a swipe.
     #[test]
-    fn a_system_with_one_overview_is_only_offered_one() {
+    fn app_windows_is_offered_beside_mission_control() {
         let offers = |field: &str| {
             Config::vocabulary()
                 .into_iter()
@@ -1562,9 +1557,8 @@ mod vocabulary_tests {
                 .map(|(_, v)| v.contains(&"appWindows"))
                 .unwrap_or(false)
         };
-        let expected = cfg!(target_os = "macos");
-        assert_eq!(offers("bindings.oneTap"), expected);
-        assert_eq!(offers("bindings.threeFingerVertSwipe"), expected);
+        assert!(offers("bindings.oneTap"));
+        assert!(offers("bindings.threeFingerVertSwipe"));
     }
 
     /// Anything the host's own trackpad settings produce must be offerable too.

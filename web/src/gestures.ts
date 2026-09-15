@@ -1,15 +1,12 @@
 /** Independent gesture triggers and action labels. */
-/** Which system the desktop is running, as it reports itself. */
-export type Os = "macos" | "windows" | "linux";
-
 /** How the fingers move. The pad drawing knows nothing else about a gesture. */
 export type Motion = "tap" | "swipe" | "scroll" | "move" | "hold";
 
 /** One gesture: a hand shape, and the config field it is bound to. */
 export interface Gesture {
   id: string;
-  /** Per-OS where the wording differs; `macos` doubles as the fallback. */
-  name: Partial<Record<Os, string>> & { macos: string };
+  /** What System Settings on a Mac would call it. */
+  name: string;
   fingers: number;
   motion: Motion;
   axis?: "x" | "y";
@@ -22,59 +19,51 @@ export interface Gesture {
   fixed?: string;
 }
 
-/** Pick the wording for this computer, falling back to the macOS phrasing. */
-export function forOs(
-  text: Partial<Record<Os, string>> & { macos: string },
-  os: Os,
-): string {
-  return text[os] ?? text.macos;
-}
-
 export const GESTURES: Gesture[] = [
   {
     id: "move",
-    name: { macos: "Move one finger" },
+    name: "Move one finger",
     fingers: 1,
     motion: "move",
     fixed: "Moves the cursor.",
   },
   {
     id: "pressAndDrag",
-    name: { macos: "Press and hold, then move" },
+    name: "Press and hold, then move",
     fingers: 1,
     motion: "hold",
     fixed:
       "Holds the button down, for dragging and selecting text. Your phone has no button, so this stands in for one.",
   },
   ...(["up", "down"] as const).map((direction): Gesture => ({
-    id: `scroll${direction}`, name: { macos: `Swipe ${direction} with two fingers` },
+    id: `scroll${direction}`, name: `Swipe ${direction} with two fingers`,
     fingers: 2, motion: "scroll", axis: "y", direction,
     fixed: "Scrolls the window. Adjust scrolling in Basics.",
   })),
   {
     id: "oneTap",
-    name: { macos: "Tap with one finger" },
+    name: "Tap with one finger",
     fingers: 1,
     motion: "tap",
     field: "bindings.oneTap",
   },
   {
     id: "twoFingerTap",
-    name: { macos: "Tap with two fingers" },
+    name: "Tap with two fingers",
     fingers: 2,
     motion: "tap",
     field: "bindings.twoFingerTap",
   },
   {
     id: "threeFingerTap",
-    name: { macos: "Tap with three fingers" },
+    name: "Tap with three fingers",
     fingers: 3,
     motion: "tap",
     field: "bindings.threeFingerTap",
   },
   {
     id: "fourFingerTap",
-    name: { macos: "Tap with four fingers" },
+    name: "Tap with four fingers",
     fingers: 4,
     motion: "tap",
     field: "bindings.fourFingerTap",
@@ -84,7 +73,7 @@ export const GESTURES: Gesture[] = [
     const directions = fingers === 2 ? ["left", "right"] as const : ["left", "right", "up", "down"] as const;
     return directions.map((direction): Gesture => ({
       id: `${count}FingerSwipe${direction[0].toUpperCase()}${direction.slice(1)}`,
-      name: { macos: `Swipe ${direction} with ${count} fingers` },
+      name: `Swipe ${direction} with ${count} fingers`,
       fingers, motion: "swipe", direction,
       axis: direction === "left" || direction === "right" ? "x" : "y",
       field: `bindings.${count}FingerSwipe${direction[0].toUpperCase()}${direction.slice(1)}`,
@@ -115,63 +104,53 @@ export function claimedFields(): Set<string> {
  * up opens it and down shows the app's windows. The direction belongs in the
  * name, where the choice is being made, rather than in a footnote under it.
  */
-const ACTION_NAMES: Record<string, Partial<Record<Os, string>> & { macos: string }> = {
-  inherit: { macos: "Use existing setting" },
-  desktopLeft: { macos: "Desktop left", linux: "Workspace left" },
-  desktopRight: { macos: "Desktop right", linux: "Workspace right" },
-  back: { macos: "Back" }, forward: { macos: "Forward" },
-  volumeUp: { macos: "Volume up" }, volumeDown: { macos: "Volume down" },
-  brightnessUp: { macos: "Brightness up" }, brightnessDown: { macos: "Brightness down" },
-  zoomIn: { macos: "Zoom in" }, zoomOut: { macos: "Zoom out" },
-  previousTab: { macos: "Previous tab" }, nextTab: { macos: "Next tab" },
-  undo: { macos: "Undo" }, redo: { macos: "Redo" },
-  none: { macos: "Do nothing" },
-  leftClick: { macos: "Left click" },
-  rightClick: { macos: "Right click" },
-  middleClick: { macos: "Middle click" },
-  // Only macOS has a smart zoom; elsewhere the nearest thing a double tap can
-  // mean is resetting the zoom, and that is what the injector sends.
-  smartZoom: { macos: "Smart zoom", windows: "Reset zoom", linux: "Reset zoom" },
-  navigate: { macos: "Back and forward" },
-  spaces: {
-    macos: "Switch full-screen apps, left and right",
-    windows: "Switch virtual desktops, left and right",
-    linux: "Switch workspaces, left and right",
-  },
-  missionControl: {
-    macos: "Mission Control up, app windows down",
-    windows: "Task View up, show the desktop down",
-    linux: "Overview up, show the desktop down",
-  },
+const ACTION_NAMES: Record<string, string> = {
+  inherit: "Use existing setting",
+  desktopLeft: "Desktop left",
+  desktopRight: "Desktop right",
+  back: "Back", forward: "Forward",
+  volumeUp: "Volume up", volumeDown: "Volume down",
+  brightnessUp: "Brightness up", brightnessDown: "Brightness down",
+  zoomIn: "Zoom in", zoomOut: "Zoom out",
+  previousTab: "Previous tab", nextTab: "Next tab",
+  undo: "Undo", redo: "Redo",
+  none: "Do nothing",
+  leftClick: "Left click",
+  rightClick: "Right click",
+  middleClick: "Middle click",
+  smartZoom: "Smart zoom",
+  navigate: "Back and forward",
+  spaces: "Switch full-screen apps, left and right",
+  missionControl: "Mission Control up, app windows down",
   // "App Exposé" is what System Settings calls it, accent and all. The label
   // here says what it does instead: the accented word is hard to type into
   // the search box above the list, and hard to read for anyone whose English
   // stops short of Apple's branding.
-  appWindows: { macos: "App windows", windows: "Task View", linux: "Window overview" },
-  volume: { macos: "Volume up and down" },
-  brightness: { macos: "Brightness up and down" },
-  zoom: { macos: "Zoom in and out" },
-  tabs: { macos: "Previous and next tab" },
-  undoRedo: { macos: "Undo and redo" },
-  launchpad: { macos: "Launchpad", windows: "Start menu", linux: "Applications" },
-  showDesktop: { macos: "Show Desktop" },
-  switchApps: { macos: "Switch apps" },
-  spotlight: { macos: "Spotlight", windows: "Search" },
-  screenshot: { macos: "Screenshot" },
-  lockScreen: { macos: "Lock screen" },
-  mute: { macos: "Mute and unmute" },
-  copy: { macos: "Copy" },
-  cut: { macos: "Cut" },
-  paste: { macos: "Paste" },
-  selectAll: { macos: "Select all" },
-  save: { macos: "Save" },
-  find: { macos: "Find" },
-  newTab: { macos: "New tab" },
-  closeWindow: { macos: "Close window" },
-  minimiseWindow: { macos: "Minimise window" },
-  quitApp: { macos: "Quit app" },
-  fullScreen: { macos: "Full screen" },
-  calculator: { macos: "Calculator" },
+  appWindows: "App windows",
+  volume: "Volume up and down",
+  brightness: "Brightness up and down",
+  zoom: "Zoom in and out",
+  tabs: "Previous and next tab",
+  undoRedo: "Undo and redo",
+  launchpad: "Launchpad",
+  showDesktop: "Show Desktop",
+  switchApps: "Switch apps",
+  spotlight: "Spotlight",
+  screenshot: "Screenshot",
+  lockScreen: "Lock screen",
+  mute: "Mute and unmute",
+  copy: "Copy",
+  cut: "Cut",
+  paste: "Paste",
+  selectAll: "Select all",
+  save: "Save",
+  find: "Find",
+  newTab: "New tab",
+  closeWindow: "Close window",
+  minimiseWindow: "Minimise window",
+  quitApp: "Quit app",
+  fullScreen: "Full screen",
+  calculator: "Calculator",
 };
 
 /**
@@ -203,7 +182,6 @@ const RECOMMENDED_PAIRED = ["spaces", "missionControl", "volume", "brightness", 
  */
 export function groupActions(
   options: string[],
-  os: Os,
   paired: boolean,
 ): { title: string; actions: string[] }[] {
   const groups: { title: string; actions: string[] }[] = [];
@@ -221,7 +199,7 @@ export function groupActions(
 
   const rest = options
     .filter((a) => !seen.has(a))
-    .sort((a, b) => actionName(a, os, paired).localeCompare(actionName(b, os, paired)));
+    .sort((a, b) => actionName(a, paired).localeCompare(actionName(b, paired)));
   if (rest.length) groups.push({ title: "Other actions", actions: rest });
   return groups;
 }
@@ -233,18 +211,18 @@ export function groupActions(
  * down". A tap has no up or down, and reading that on a tap describes a gesture
  * the user is not making.
  */
-const SINGLE_NAMES: Record<string, Partial<Record<Os, string>> & { macos: string }> = {
-  missionControl: { macos: "Mission Control", windows: "Task View", linux: "Overview" },
+const SINGLE_NAMES: Record<string, string> = {
+  missionControl: "Mission Control",
 };
 
 /**
- * The action's name for this computer, or the raw value if it is unknown.
+ * The action's name, as a Mac names it, or the raw value if it is unknown.
  *
  * `paired` is whether the gesture performing it has two directions.
  */
-export function actionName(value: string, os: Os, paired = true): string {
+export function actionName(value: string, paired = true): string {
   const name = (!paired && SINGLE_NAMES[value]) || ACTION_NAMES[value];
-  return name ? forOs(name, os) : `${value} (unknown)`;
+  return name ?? `${value} (unknown)`;
 }
 
 /** Does this gesture have two directions for an action to split across? */
@@ -253,9 +231,7 @@ export function isPaired(g: Gesture): boolean {
 }
 
 /** Kept for the fields Advanced still renders as a plain menu. */
-export const ACTIONS: Record<string, string> = Object.fromEntries(
-  Object.entries(ACTION_NAMES).map(([k, v]) => [k, v.macos]),
-);
+export const ACTIONS: Record<string, string> = ACTION_NAMES;
 
 /** Resolve old paired bindings without changing a user's existing setup. */
 export function inheritedAction(g: Gesture, legacy: string, natural: boolean): string {

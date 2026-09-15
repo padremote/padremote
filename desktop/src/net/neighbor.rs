@@ -6,35 +6,12 @@ pub(super) async fn mac_for(ip: IpAddr) -> Option<String> {
     if ip.is_loopback() || ip.is_unspecified() || ip.is_multicast() {
         return None;
     }
-    let mut command;
-    #[cfg(target_os = "macos")]
-    {
-        command = tokio::process::Command::new(if ip.is_ipv4() {
-            "/usr/sbin/arp"
-        } else {
-            "/usr/sbin/ndp"
-        });
-        command.args(["-n", &ip.to_string()]);
-    }
-    #[cfg(target_os = "linux")]
-    {
-        command = tokio::process::Command::new("ip");
-        command.args(["neigh", "show", "to", &ip.to_string()]);
-    }
-    #[cfg(target_os = "windows")]
-    {
-        if ip.is_ipv6() {
-            return None;
-        }
-        command = tokio::process::Command::new("arp");
-        command.args(["-a", &ip.to_string()]);
-        use std::os::windows::process::CommandExt;
-        command.as_std_mut().creation_flags(0x08000000);
-    }
-    #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
-    {
-        return None;
-    }
+    let mut command = tokio::process::Command::new(if ip.is_ipv4() {
+        "/usr/sbin/arp"
+    } else {
+        "/usr/sbin/ndp"
+    });
+    command.args(["-n", &ip.to_string()]);
     command.kill_on_drop(true);
     let output = tokio::time::timeout(Duration::from_millis(500), command.output())
         .await

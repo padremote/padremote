@@ -53,19 +53,12 @@ fn main() -> Result<()> {
     }
 
     let mut injector: Option<Box<dyn Injector>> = if inject {
-        #[cfg(target_os = "macos")]
-        {
-            use padremote::input::{accessibility_trusted, permission_help, PlatformInjector};
-            if !accessibility_trusted() {
-                eprintln!("{}", permission_help());
-                anyhow::bail!("Accessibility permission is not granted");
-            }
-            Some(Box::new(PlatformInjector::new()?))
+        use padremote::input::{accessibility_trusted, permission_help, PlatformInjector};
+        if !accessibility_trusted() {
+            eprintln!("{}", permission_help());
+            anyhow::bail!("Accessibility permission is not granted");
         }
-        #[cfg(not(target_os = "macos"))]
-        {
-            anyhow::bail!("--inject has no backend on this platform yet")
-        }
+        Some(Box::new(PlatformInjector::new()?))
     } else {
         None
     };

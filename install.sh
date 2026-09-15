@@ -63,7 +63,7 @@ fi
 # -------------------------------------------------------------- requirements
 
 if [ "$(uname -s)" != "Darwin" ]; then
-  oops "PadRemote's input backend is macOS-only today. See docs/dev/porting.md."
+  oops "PadRemote supports macOS only. Linux and Windows are not supported yet - see docs/dev/porting.md."
   exit 1
 fi
 

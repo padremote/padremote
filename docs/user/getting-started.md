@@ -3,6 +3,9 @@
 You need a Mac and a phone on the **same Wi-Fi**. Nothing is installed on the
 phone — it just opens a web page.
 
+> **macOS only.** PadRemote supports macOS 13 or later. Linux and Windows are
+> not supported yet.
+
 ---
 
 ## 1. Install

@@ -85,7 +85,7 @@ effective.bindings.threeFingerVertSwipe = "missionControl";
 effective.bindings.threeFingerHorizSwipe = "spaces";
 
 const configState = () => JSON.stringify({
-  t: "config", computer: "Studio Mac", os: "macos",
+  t: "config", computer: "Studio Mac",
   path: "/Users/an/Library/Application Support/PadRemote/config.json",
   file, effective, followSystem: file.followSystem, host, decidedBy, mirrorWrites, vocabulary,
 });

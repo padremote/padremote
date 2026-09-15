@@ -1,13 +1,15 @@
 //! PadRemote desktop app: turn a phone's touchscreen into a wireless trackpad.
 //!
-//! Layered so that porting to another OS touches exactly one module:
+//! macOS only. Linux and Windows are not supported yet; `build.rs` refuses to
+//! build for them, and `docs/dev/porting.md` says what supporting one would
+//! take. The layering below still keeps the macOS-specific code in two places:
 //!
 //! - [`auth`]     the pairing secret, and the challenge every connection
 //!   answers before it is allowed to touch the cursor.
 //! - [`app`]      the loops that run for the life of the process: the engine's
 //!   clock, config hot-reload, and the wait for permission.
 //! - [`gesture`]  touch samples -> intent. Pure, deterministic, OS-agnostic.
-//! - [`input`]    intent -> real OS input events. The only per-platform code.
+//! - [`input`]    intent -> real input events, through CGEvent.
 //! - [`protocol`] the wire format shared with the phone page.
 //! - [`net`]      the local WebSocket server that joins them together.
 //! - [`pairing`]  the QR that points a phone's camera at this computer.
@@ -25,7 +27,6 @@ pub mod pairing;
 pub mod protocol;
 pub mod sync;
 pub mod sysprefs;
-#[cfg(target_os = "macos")]
 pub mod tray;
 
 /// Milliseconds since the process started, the clock the engine runs on.
