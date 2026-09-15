@@ -5,6 +5,7 @@ gave it away.
 
 | Symptom | Most likely |
 |---|---|
+| [macOS says "PadRemote" Not Opened](#padremote-not-opened) | A downloaded copy that isn't notarized — allow it, once per copy |
 | [Cursor doesn't move at all](#the-cursor-doesnt-move-at-all) | Accessibility permission, or `--dry-run` |
 | [Phone says "This site can't be reached"](#this-site-cant-be-reached) | PadRemote isn't running, or your Mac's address moved |
 | [Phone says it isn't paired](#the-pad-says-it-isnt-paired) | Never scanned, or the pairing was revoked |
@@ -47,6 +48,54 @@ Under **Connection measurements**:
 - **Peak fingers** — how many fingers the gesture is being judged on.
 
 ---
+
+## "PadRemote" Not Opened
+
+> Apple could not verify "PadRemote" is free of malware that may harm your Mac
+> or compromise your privacy.
+
+Nothing is wrong with the download. `PadRemote.dmg` is not notarized yet —
+Apple's malware check needs a paid developer account the project does not have
+— so macOS stops any copy that came from the internet until you allow it.
+
+Click **Done** (not *Move to Trash*, which some regions call *Move to Bin*),
+then:
+
+1. **System Settings → Privacy & Security**, and scroll down to **Security**
+2. Next to *"PadRemote" was blocked to protect your Mac*, click **Open Anyway**
+3. Confirm with your password or Touch ID, and **Open Anyway** once more
+
+On macOS 13 and 14, Control-click PadRemote in Applications → **Open** does the
+same.
+
+**It comes back after a reinstall or an update.** The approval belongs to the
+copy you allowed, not to PadRemote. Delete the app and drag it in again, or
+install a newer version, and macOS is looking at a copy it has never seen: the
+same dialog, the same three steps.
+
+**If the cursor then doesn't move,** Accessibility needs redoing too. That grant
+is tied to the exact build, so after an update the switch stays on while the new
+copy is refused. Select PadRemote in **Privacy & Security → Accessibility**,
+remove it with **–**, and grant it again.
+
+**No Open Anyway button?** It only shows for a while after macOS blocked the
+app. Open PadRemote again, let the dialog appear, then go back.
+
+**From a terminal** it is one line. macOS tags everything you download as coming
+from the internet, and that tag is what it checks; this removes it:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/PadRemote.app
+```
+
+**"PadRemote is damaged and can't be opened"** is a different dialog: the app's
+contents no longer match its signature, which in practice means a download or a
+copy that did not finish. Delete it, download again, and compare
+`shasum -a 256 PadRemote.dmg` with the `PadRemote.dmg.sha256` on the
+[release page](https://github.com/padremote/padremote/releases/latest).
+
+A copy you build yourself with `./install.sh` never sees either dialog: it was
+never downloaded, so there is no tag for macOS to check.
 
 ## The cursor doesn't move at all
 
