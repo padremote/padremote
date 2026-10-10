@@ -61,7 +61,7 @@ padremote/
 ├── desktop/               # macOS desktop app (Rust, one binary)
 │   ├── src/
 │   │   ├── main.rs        # tray icon, first-run/permission flow, lifecycle
-│   │   ├── net.rs         # local WebSocket server, discovery, pairing store
+│   │   ├── net.rs         # local WebSocket server, pairing store
 │   │   ├── gesture/       # touch→intent recognizer, config, accel curve (shared, OS-agnostic)
 │   │   └── input/         # injection backend: macos.rs (CGEvent)
 │   ├── tests/             # recognizer tests on recorded touch streams
@@ -69,7 +69,7 @@ padremote/
 ├── web/                   # phone page (Vite + TypeScript, no framework)
 │   ├── src/
 │   │   ├── surface.ts     # pointer/touch capture, gesture-suppression
-│   │   ├── net.ts         # local WebSocket client, discovery, reconnect
+│   │   ├── net.ts         # local WebSocket client, reconnect
 │   │   ├── pairing.ts     # session code parsing, localStorage
 │   │   └── ui.ts          # status dot, hints, settings sheet
 │   └── public/            # PWA manifest, service worker, icons
@@ -93,7 +93,7 @@ Note: `mac/` (Swift) and `signaling/` (Cloudflare Worker) from earlier drafts ar
 ### Desktop app (Rust; macOS 13+ only)
 - **Rust**, one self-contained compiled binary per OS — no runtime for the user to install (the "installs like Ollama" bar). Linux and Windows are not supported yet; a port would reuse everything below except the injection backend and the settings reader.
 - Tray/menu-bar UI: `tray-icon` + a minimal settings window (`tao`/`muda`, or a small `egui`/Tauri shell if a richer window is wanted). QR rendered with the `qrcode` crate.
-- Local server: `tokio` + `tokio-tungstenite` WebSocket listener on the LAN, advertised for discovery (see section 7). TLS via `rustls` with a self-signed cert (needed because the phone page is served over HTTPS and must reach `wss://`).
+- Local server: `tokio` + `tokio-tungstenite` WebSocket listener on the LAN, reached at the address the QR carries (see section 7). TLS via `rustls` with a self-signed cert (needed because the phone page is served over HTTPS and must reach `wss://`).
 - Input injection: **CGEvent** directly (move, click, scroll, key events), because a portable layer such as `enigo` exposes neither pixel scrolling with gesture phases nor click state:
   - Move: relative cursor motion from accumulated deltas.
   - Click / right-click / middle-click / drag: button press/release with click-state for double-click.
@@ -153,17 +153,17 @@ You host **only a static page**, and even that can be self-hosted by the desktop
 The QR carries the desktop app's own LAN address, so the phone connects directly with no discovery service.
 
 ### First run
-1. Desktop app generates a **pairing secret** `P` (128-bit) and a self-signed TLS cert (once, stored). It starts the WebSocket server on the LAN and learns its own address(es).
+1. Desktop app generates a **pairing secret** `P` (128-bit) and a self-signed TLS cert (once, stored). It starts the WebSocket server on the LAN and learns its own LAN address.
 2. Desktop shows a QR: `https://padremote.com/go#h=<lan-ip:port>&p=<P>&cert=<cert-fingerprint>&n=<computer name>`. The secret and fingerprint are in the URL fragment, so they never leave the phone.
 3. User scans with the phone camera app → page opens → the surface appears.
 4. Page opens `wss://<lan-ip:port>`, pins the cert fingerprint from the QR, and authenticates by proving it knows `P` (HMAC challenge). Mismatch → desktop drops the connection.
 5. On success: desktop stores the phone as paired; page stores `P`, the address, cert fingerprint and computer name in `localStorage`.
 
-Robustness: the QR may list several candidate addresses (Wi‑Fi, Ethernet) and the page tries them in order. If the desktop's LAN IP changes later, reconnection falls back to a small discovery step (mDNS/`_padremote._tcp` where available, else the user re-scans a fresh QR — one tap from the tray).
+Robustness: the QR carries one address, the computer's LAN address (Wi‑Fi, or the wired adapter where Wi‑Fi has none). Phone and computer on the same network is the only supported setup — deliberately no discovery service, and no hotspot, USB, Bluetooth or peer-to-peer path. Each of those was weighed and each adds a step a normal user should not have to learn: a web page can only reach the computer over IP, so even a cable needs Personal Hotspot switched on first. If the desktop's LAN IP changes later, the app notices, the connect page redraws its QR, and the user re-scans — one tap from the tray — without re-pairing.
 
 ### Subsequent runs (no QR)
 - Page (opened from the home-screen icon) reads the stored address + `P`, reconnects, and authenticates silently. Status dot goes green.
-- If the stored address fails (IP changed / different network): try discovery, then show "Open PadRemote on your computer and scan again", retrying with backoff (1 s → 10 s).
+- If the stored address fails (IP changed / different network): show "Open PadRemote on your computer and scan again", retrying with backoff (1 s → 10 s).
 
 ### Reconnect / reset
 - Auto-reconnect with backoff on socket close or network change; the desktop releases any held button the instant the socket drops (no stuck drag).
