@@ -229,8 +229,9 @@ Builds release, assembles the bundle, generates the icon (a dependency-free PNG
 writer — the icon is a few rounded rectangles), ad-hoc signs it so the
 Accessibility grant survives rebuilds, and nudges Spotlight.
 
-Not yet Developer ID signed or notarized: on another Mac, Gatekeeper still
-objects. That is milestone 5.
+A copy built this way opens without question on the Mac that built it. On any
+other Mac it needs the Developer ID signature and notarization that
+`make-dmg.sh` adds — see [Signing the download](#signing-the-download).
 
 ### The download
 
@@ -249,6 +250,69 @@ runner and attaches it to a GitHub Release:
 # bump version in desktop/Cargo.toml first - the workflow refuses a mismatch
 git tag v0.1.0 && git push origin v0.1.0
 ```
+
+### Signing the download
+
+Without it, everyone who opens the download is told macOS *could not verify
+"PadRemote" is free of malware*, and has to find **Open Anyway** in Privacy &
+Security. To most people that dialog says "virus". Nothing but a Developer ID
+signature plus Apple's notarization makes it go away, and both need a paid
+Apple Developer account. Once set up, the release workflow signs, notarizes
+and staples every tag, and asks Gatekeeper to confirm before publishing.
+
+It also fixes the other install annoyance: a Developer ID signature is the same
+identity from one version to the next, so the **Accessibility grant survives
+updates** instead of silently lapsing (see
+[`gotchas.md`](gotchas.md#an-ad-hoc-signature-has-no-identity-across-rebuilds)).
+
+One-time setup:
+
+1. **Join the [Apple Developer Program](https://developer.apple.com/programs/enroll/)**
+   (US$99 a year, as an individual or an organization). Approval can take a
+   day or two.
+2. **Create a *Developer ID Application* certificate.** Xcode → Settings →
+   Accounts → your team → Manage Certificates → **+** → *Developer ID
+   Application*. Only the account holder can. Not *Apple Development* or
+   *Apple Distribution* — neither can be notarized for download outside the
+   App Store.
+3. **Export it** from Keychain Access (*My Certificates*, right-click →
+   Export, `.p12`, with a password).
+4. **Create an App Store Connect API key** for the notary service:
+   [App Store Connect](https://appstoreconnect.apple.com/access/integrations/api)
+   → Users and Access → Integrations → Team Keys → **+**, role *Developer*.
+   Download the `.p8` (it is offered once) and note the Key ID and the Issuer
+   ID above the list.
+5. **Hand all five to the repository:**
+
+   ```sh
+   base64 -i DeveloperID.p12 | gh secret set MACOS_CERTIFICATE_P12
+   gh secret set MACOS_CERTIFICATE_PASSWORD          # the .p12 password
+   gh secret set NOTARY_KEY_P8 < AuthKey_XXXXXXXXXX.p8
+   gh secret set NOTARY_KEY_ID                       # e.g. XXXXXXXXXX
+   gh secret set NOTARY_ISSUER                       # a UUID
+   ```
+
+The next tag is then notarized. Its log ends in `source=Notarized Developer ID`,
+and its release notes drop the Open Anyway step. With no secrets set the
+release still ships, unsigned, with a warning on the run; with only some set
+it stops.
+
+To build a notarized image on your own Mac instead, store the key once and
+point the script at the certificate in your login keychain:
+
+```sh
+xcrun notarytool store-credentials padremote \
+  --key AuthKey_XXXXXXXXXX.p8 --key-id XXXXXXXXXX --issuer <issuer-uuid>
+CODESIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" \
+  NOTARY_PROFILE=padremote ./desktop/packaging/make-dmg.sh
+```
+
+When the first notarized release is out, the Open Anyway instructions become
+wrong: `README.md`, `docs/user/getting-started.md`,
+`docs/user/troubleshooting.md`, `docs/README.md` and the wiki's
+*Install-on-macOS* page (a separate repository) all describe them.
+
+### Where the download is linked
 
 Everything that offers the download — the README, the wiki's
 [Install on macOS](https://github.com/padremote/padremote/wiki/Install-on-macOS)

@@ -54,16 +54,97 @@ jobs:
             exit 1
           fi
 
+      # Signing and notarizing, so the download opens like any other app instead
+      # of macOS warning that it cannot check it for malware - a dialog that
+      # reads as "this is a virus" to most people who meet it. Needs five
+      # repository secrets; docs/dev/development.md, "Signing the download", has
+      # the one-time setup. Without them the release still ships, ad-hoc
+      # signed, and its notes carry the Open Anyway steps instead.
+      - name: Load the Developer ID certificate
+        id: signing
+        env:
+          CERT_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
+          CERT_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          NOTARY_KEY_P8: ${{ secrets.NOTARY_KEY_P8 }}
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER: ${{ secrets.NOTARY_ISSUER }}
+        run: |
+          set -euo pipefail
+          present=0
+          for v in "$CERT_P12" "$CERT_PASSWORD" "$NOTARY_KEY_P8" "$NOTARY_KEY_ID" "$NOTARY_ISSUER"; do
+            [ -n "$v" ] && present=$((present + 1))
+          done
+          if [ "$present" -eq 0 ]; then
+            echo "::warning::No signing secrets, so this release is not notarized: macOS will warn everyone who opens it that it cannot check it for malware."
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Some but not all is a mistake in setting them up, not a choice to
+          # ship unsigned - stop rather than quietly publish the warning.
+          if [ "$present" -ne 5 ]; then
+            echo "::error::Only $present of the 5 signing secrets are set (MACOS_CERTIFICATE_P12, MACOS_CERTIFICATE_PASSWORD, NOTARY_KEY_P8, NOTARY_KEY_ID, NOTARY_ISSUER)."
+            exit 1
+          fi
+
+          # A keychain of its own, so codesign never stops to ask for a
+          # password nobody is there to type. The partition list is what lets
+          # codesign use the key without that prompt.
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          kc_pass="$(openssl rand -hex 24)"
+          security create-keychain -p "$kc_pass" "$keychain"
+          security set-keychain-settings -lut 3600 "$keychain"
+          security unlock-keychain -p "$kc_pass" "$keychain"
+          printf '%s' "$CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$keychain" -P "$CERT_PASSWORD" -T /usr/bin/codesign
+          rm -f "$RUNNER_TEMP/cert.p12"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$kc_pass" "$keychain" >/dev/null
+          # shellcheck disable=SC2046 # the existing keychains, one word each
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+
+          identity="$(security find-identity -v -p codesigning "$keychain" \
+            | sed -n 's/.*"\(Developer ID Application: .*\)"$/\1/p' | head -1)"
+          if [ -z "$identity" ]; then
+            echo "::error::MACOS_CERTIFICATE_P12 holds no \"Developer ID Application\" identity. An \"Apple Development\" or \"Apple Distribution\" certificate cannot be notarized."
+            exit 1
+          fi
+
+          printf '%s\n' "$NOTARY_KEY_P8" > "$RUNNER_TEMP/notary.p8"
+          {
+            echo "CODESIGN_IDENTITY=$identity"
+            echo "NOTARY_KEY=$RUNNER_TEMP/notary.p8"
+            echo "NOTARY_KEY_ID=$NOTARY_KEY_ID"
+            echo "NOTARY_ISSUER=$NOTARY_ISSUER"
+          } >> "$GITHUB_ENV"
+          echo "signed=true" >> "$GITHUB_OUTPUT"
+
+      # Signs, notarizes and staples when the step above set an identity, and
+      # fails - publishing nothing - if Apple or Gatekeeper refuses the result.
       - name: Build PadRemote.dmg
         run: ./desktop/packaging/make-dmg.sh
 
-      # The body is the part people read before they open the file, so it says
-      # the one thing that will otherwise look like a broken download.
+      # The body is the part people read before they open the file. A notarized
+      # build opens like any app, so its notes say nothing about Gatekeeper; an
+      # unsigned one says the one thing that will otherwise look like a broken
+      # download - or a virus.
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
+          SIGNED: ${{ steps.signing.outputs.signed }}
         run: |
-          cat > "$RUNNER_TEMP/notes.md" <<'NOTES'
+          if [ "$SIGNED" = "true" ]; then
+            cat > "$RUNNER_TEMP/notes.md" <<'NOTES'
+          ## Install on a Mac
+
+          1. Download **PadRemote.dmg** below and open it.
+          2. Drag **PadRemote** onto **Applications**, then open it from there.
+          3. Grant **Accessibility** when asked, then scan the QR with your phone.
+
+          Signed with a Developer ID and notarized by Apple.
+
+          Full walkthrough: [Install on macOS](https://github.com/padremote/padremote/wiki/Install-on-macOS)
+          NOTES
+          else
+            cat > "$RUNNER_TEMP/notes.md" <<'NOTES'
           ## Install on a Mac
 
           1. Download **PadRemote.dmg** below and open it.
@@ -76,8 +157,17 @@ jobs:
 
           Full walkthrough: [Install on macOS](https://github.com/padremote/padremote/wiki/Install-on-macOS)
           NOTES
+          fi
           gh release create "$GITHUB_REF_NAME" \
             dist/PadRemote.dmg dist/PadRemote.dmg.sha256 \
             --title "PadRemote $GITHUB_REF_NAME" \
             --notes-file "$RUNNER_TEMP/notes.md" \
             --generate-notes
+
+      # The runner is thrown away afterwards, but the certificate's private key
+      # and the API key should not outlive the job that needed them even so.
+      - name: Remove the signing keys
+        if: always()
+        run: |
+          security delete-keychain "$RUNNER_TEMP/signing.keychain-db" 2>/dev/null || true
+          rm -f "$RUNNER_TEMP/notary.p8" "$RUNNER_TEMP/cert.p12"

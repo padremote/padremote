@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 # Build PadRemote.app and install it where Spotlight can find it.
 #
-# This is the first step of the "installs like Ollama" bar (plan.md §11.1). It is
-# not yet signed or notarized, so Gatekeeper will still ask on a machine other
-# than the one that built it - make-dmg.sh wraps this bundle for download, and
-# the download's docs walk through that one-time question.
+# This is the first step of the "installs like Ollama" bar (plan.md §11.1). A copy
+# built here is ad-hoc signed, which is all this Mac needs. The download is the
+# same bundle signed with a Developer ID and notarized by make-dmg.sh, which is
+# what lets it open on someone else's Mac without a malware warning.
 #
+#   CODESIGN_IDENTITY  sign with this identity instead of ad-hoc; see the
+#                      signing note further down
 #   UNIVERSAL=1   one binary for Apple Silicon and Intel (needs both Rust
 #                 targets); the default builds for this Mac only, which is
 #                 faster and all an install on this Mac needs
@@ -116,9 +118,25 @@ iconutil -c icns "$WORK/icon.iconset" -o "$APP/Contents/Resources/icon.icns"
 # Set CODESIGN_IDENTITY to a real (even self-signed) code-signing identity to
 # escape that: its requirement is identifier-plus-certificate, which survives
 # rebuilds, and the grant sticks for good.
+#
+# A "Developer ID Application" identity - the one the download is signed with -
+# also gets the hardened runtime and a secure timestamp, because Apple's notary
+# service rejects a build without either. The app needs no entitlements under
+# the hardened runtime: posting CGEvents is governed by the Accessibility grant,
+# not by the runtime, and the pairing notification is drawn by `osascript`, a
+# process of its own. A self-signed identity gets neither flag: Apple's
+# timestamp server only stamps certificates Apple issued.
 if [ -n "${CODESIGN_IDENTITY:-}" ]; then
-  codesign --force --deep --sign "$CODESIGN_IDENTITY" "$APP" \
-    && echo "==> signed as $CODESIGN_IDENTITY (grant survives rebuilds)"
+  SIGN_FLAGS=()
+  case "$CODESIGN_IDENTITY" in
+    "Developer ID Application"*) SIGN_FLAGS=(--options runtime --timestamp) ;;
+  esac
+  # Not `codesign ... && echo`: a failure inside an && list does not trip
+  # `set -e`, and a release that silently shipped unsigned is exactly the
+  # malware warning this identity exists to prevent. The odd expansion is for
+  # the bash 3.2 macOS ships, where an empty array under `set -u` is an error.
+  codesign --force --sign "$CODESIGN_IDENTITY" ${SIGN_FLAGS[@]+"${SIGN_FLAGS[@]}"} "$APP"
+  echo "==> signed as $CODESIGN_IDENTITY (grant survives rebuilds)"
 else
   codesign --force --deep --sign - "$APP" >/dev/null 2>&1 \
     && echo "==> signed (ad-hoc)" || echo "==> could not sign"
