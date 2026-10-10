@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="web/public/icon.svg" alt="PadRemote logo" width="96">
+</p>
+
 <h1 align="center">PadRemote</h1>
 
 <p align="center">
